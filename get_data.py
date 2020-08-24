@@ -41,11 +41,17 @@ from konoha.radial_velocity import *
 from  konoha import linesDict
 from scipy.optimize import curve_fit
 import seaborn as sns
+import socket
 
 sns.set_style("white", {"xtick.major.direction": 'in',
               "ytick.major.direction": 'in'})
 
 
+PCname = socket.gethostname()
+if PCname == 'Pakkun':
+    direc = '/Users/amanda/Drive/'
+else:
+    direc = '/home/amanda/'
 
 
 def get_iue():
@@ -112,7 +118,7 @@ def get_lines(line):
         USE = ['ESPaDOnS', 'BeSOS', 'FEROS', 'NRES']
 
     
-    
+
     
     
     lbd0 = linesDict.line_names[line][1]
@@ -120,7 +126,7 @@ def get_lines(line):
     # plot ESPaDOnS
     flag = 'ESPaDOnS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/ESPaDOnS/new/*i.fits.gz')
+        lines = glob(direc+'Dropbox/Amanda/Data/ESPaDOnS/new/*i.fits.gz')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         ####
@@ -163,7 +169,7 @@ def get_lines(line):
     ## plot BeSS
     flag = 'BeSS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/BeSS/new/*fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/BeSS/new/*fits')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -207,7 +213,7 @@ def get_lines(line):
     # plot MUSICOS
     flag = 'OPD - Musicos'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/MUSICOS/andre/spec_*/acol/*halpha.fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/MUSICOS/andre/spec_*/acol/*halpha.fits')
         MJD = np.zeros([len(lines)])
         #######################################
         # Andre disse q estao corrigidos
@@ -238,7 +244,7 @@ def get_lines(line):
     ## plot Moser
     flag = 'OPD - Ecass'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/ecass_musicos/data/alpCol*')
+        lines = glob(direc+'Dropbox/Amanda/Data/ecass_musicos/data/alpCol*')
         MJD = np.zeros([len(lines)])
         
         ## NO INFO ON HEADER!
@@ -278,7 +284,7 @@ def get_lines(line):
     # plot UVES
     flag = 'UVES'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/UVES/new/*.fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/UVES/new/*.fits')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -320,7 +326,7 @@ def get_lines(line):
     ##plot BeSOS
     flag = 'BeSOS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/BeSOS/2018/*.fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/BeSOS/2018/*.fits')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -358,7 +364,7 @@ def get_lines(line):
     #plot prof_nelson
     flag = 'FEROS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/prof_nelson/*/*')
+        lines = glob(direc+'Dropbox/Amanda/Data/prof_nelson/*/*')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -396,7 +402,7 @@ def get_lines(line):
     
     flag = 'NRES'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/NRES/*fits*')
+        lines = glob(direc+'Dropbox/Amanda/Data/NRES/*fits*')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -470,7 +476,8 @@ def get_halpha():
 
     line = 'Ha'
     if line == 'Ha':
-        USE = ['ESPaDOnS', 'BeSS', 'BeSOS', 'UVES', 'FEROS', 'OPD - Musicos', 'OPD - Ecass', 'NRES']
+        #USE = ['ESPaDOnS', 'BeSS', 'BeSOS', 'UVES', 'FEROS', 'OPD - Musicos', 'OPD - Ecass', 'NRES']
+        USE = ['NRES']
     else:
         USE = ['ESPaDOnS','BeSOS', 'FEROS']
     
@@ -481,7 +488,7 @@ def get_halpha():
     # plot ESPaDOnS
     flag = 'ESPaDOnS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/ESPaDOnS/new/*i.fits.gz')
+        lines = glob(direc+'Dropbox/Amanda/Data/ESPaDOnS/new/*i.fits.gz')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         ####
@@ -524,7 +531,7 @@ def get_halpha():
     ## plot BeSS
     flag = 'BeSS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/BeSS/new/*fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/BeSS/new/*fits')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -568,7 +575,7 @@ def get_halpha():
     # plot MUSICOS
     flag = 'OPD - Musicos'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/MUSICOS/andre/spec_*/acol/*halpha.fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/MUSICOS/andre/spec_*/acol/*halpha.fits')
         MJD = np.zeros([len(lines)])
         #######################################
         # Andre disse q estao corrigidos
@@ -599,7 +606,7 @@ def get_halpha():
     ## plot Moser
     flag = 'OPD - Ecass'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/ecass_musicos/data/alpCol*')
+        lines = glob(direc+'Dropbox/Amanda/Data/ecass_musicos/data/alpCol*')
         MJD = np.zeros([len(lines)])
         
         ## NO INFO ON HEADER!
@@ -639,7 +646,7 @@ def get_halpha():
     # plot UVES
     flag = 'UVES'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/UVES/new/*.fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/UVES/new/*.fits')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -681,7 +688,7 @@ def get_halpha():
     ##plot BeSOS
     flag = 'BeSOS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/BeSOS/2018/*.fits')
+        lines = glob(direc+'Dropbox/Amanda/Data/BeSOS/2018/*.fits')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -719,7 +726,7 @@ def get_halpha():
     #plot prof_nelson
     flag = 'FEROS'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/prof_nelson/*/*')
+        lines = glob(direc+'Dropbox/Amanda/Data/prof_nelson/*/*')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
@@ -757,7 +764,7 @@ def get_halpha():
     
     flag = 'NRES'
     if flag in USE:
-        lines = glob('/home/amanda/Dropbox/Amanda/Data/NRES/*fits*')
+        lines = glob(direc+'Dropbox/Amanda/Data/NRES/*fits*')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
