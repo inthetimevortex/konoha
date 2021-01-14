@@ -403,7 +403,7 @@ def geneva_interp_fast(Par, oblat, t, neighbours_only=True, isRpole=False):
     from scipy.interpolate import griddata
 
     # read grid
-    dir0 = 'defs/geneve_models/'
+    dir0 = '~/Dropbox/Amanda/GRID/defs/geneve_models/'
     fname = 'geneva_interp_Z014.npz'
     data = np.load(dir0 + fname)
     Mstar_arr = data['Mstar_arr']

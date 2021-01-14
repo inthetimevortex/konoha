@@ -32,10 +32,11 @@ from .constants import *
 from .linesDict import line_names
 from .dynamic import dynamic_spectra
 from .be_theory import t_tms_from_Xc, hfrac2tms, oblat2w, obl2W, W2oblat
+from .colormaper import hex_to_rgb, rgb_to_dec, get_continuous_cmap
 
 
 __version__ = "0.1"
 __all__ = ('get_halpha', 'get_iue', 'get_lines', 'get_sed', 'plot_lines', 'delta_v', 'Ha_delta_v', 'fwhm2sigma', 'gauss', 'jy2cgs', 'color_corr', 'vosa2catvalues',
             'kde_scipy', 'integral', 'griddataBA', 'griddataBA_new', 'griddataBAtlas', 'bin_data', 'find_nearest', 'find_neighbours', 'geneva_interp_fast',
             'poly_interp', 'xdr_reader', 'line_names', 'dynamic_spectra', 'gen_plot_lines', 'Sliding_Outlier_Removal', 'gentkdates',
-            't_tms_from_Xc', 'hfrac2tms', 'oblat2w', 'obl2W', 'W2oblat')
+            't_tms_from_Xc', 'hfrac2tms', 'oblat2w', 'obl2W', 'W2oblat',  'hex_to_rgb', 'rgb_to_dec', 'get_continuous_cmap')

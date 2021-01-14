@@ -54,11 +54,11 @@ sns.set_style("white", {"xtick.major.direction": 'in',
 
 #vel_all, flux_all, MJD_all, flag_all = get_halpha()
 def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin, vmax, set_limits, phase_folded, P, t0):
-    
+
     #resolution = 0.5 #days
     
     flx_all=[]
-    temp = np.arange(-850, +850, 1)
+    temp = np.arange(-750, +750, 1)
 
     
     MJD_to_sort = np.array(MJD_all)
@@ -68,14 +68,15 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
     vel_all = np.array(vel_all)[sort]
     flux_all = np.array(flux_all)[sort]
     
-    
-    
+    #print(len(MJD_all))
+    #print(vel_all)
+    #print(flux_all)
     for i in range(len(flux_all)):
         # interpolates specrum on 'temp', from -850 to 850 km/s, so they all have the same size :)
         flx = griddata(vel_all[i], flux_all[i], temp, method='linear')
         #plt.plot(vel_all[i], flux_all[i], linewidth=0.4, label=MJD_all[i])
         flx_all.append(flx)
-        
+    #print(flx_all)
     flxx = np.array(flx_all)
     keep = np.logical_not(np.isnan(np.array(flx_all)))[:,0]
     flx_all = flxx[keep]
@@ -87,7 +88,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
     #plt.show()
     # colormap for the dynamic spectra
     my_cmap = mpl.cm.magma
-    
+    #print(len(MJD_all))
     #im so good at names
     hello = np.mean(flx_all, axis=0)
 
@@ -103,7 +104,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
 
     #flux_a = np.tile(flx_all[0], (1, 1)) 
     MJD_a = MJD_all[sort]
-    print(len(MJD_a), len(MJD_all))
+    #print(len(MJD_a), len(MJD_all))
     MJD_a = MJD_a - min(MJD_a)
     phase = (MJD_a-t0)/P %1
 

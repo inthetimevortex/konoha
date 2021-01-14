@@ -29,6 +29,10 @@ import matplotlib.patches as mpatches
 import pyhdust as phd
 import pyfits
 from astropy.io import fits
+from astropy.time import Time
+from astropy import units as u
+from astropy.coordinates import SkyCoord, EarthLocation
+from astropy.constants import au, c
 import datetime as dt
 from collections import OrderedDict
 import pyhdust.spectools as spt
@@ -142,16 +146,16 @@ def get_lines(line):
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #f = open('{0}_{1}.txt'.format(flag, n), 'wb')
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             #read MJD
-            MJD[n] = fits_header['MJDATE']
-            
-            lat = fits_header['LATITUDE']
-            lon = fits_header['LONGITUD']
+            #MJD[n] = fits_header['MJDATE']
+            #
+            #lat = fits_header['LATITUDE']
+            #lon = fits_header['LONGITUD']
             lbd = fits_data[0, :]
             ordem = lbd.argsort()
             lbd = lbd[ordem]
@@ -408,7 +412,7 @@ def get_lines(line):
         
         #lat = -29.257778
         #lon = -70.736667
-        
+        barycorr_list = []
         # FROM HEADER
         ###################################################################
         #HISTORY  'BARY_CORR'      ,'R*4 '   ,    1,    1,'5E14.7',' ',' '               
@@ -428,7 +432,9 @@ def get_lines(line):
             MJD[n] = t.mjd
             DAY_OBS = headers['DATE-OBS']
             SITE = headers['SITE']
-            
+            LONG1 = headers['LONG1']
+            LAT1= headers['LAT1']
+            HT1 = headers['HT1']
             SpecRaw = hdulist[1]
             SpecFlat = hdulist[2]
             SpecBlaze = hdulist[3]
@@ -444,18 +450,29 @@ def get_lines(line):
             #flx_list.append(SpecBlaze)
             BJD_list.append(BJD_mid_exp)
             MJD_all.append(MJD[n])
-            
+            obs_loc = EarthLocation.from_geodetic(lat=LAT1*u.deg, lon=LONG1*u.deg, height=HT1*u.m)
+            sc = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
         wl_list = np.array(wl_list)[np.argsort(BJD_list)]
         flx_list = np.array(flx_list)[np.argsort(BJD_list)]
         BJD_list = np.array(BJD_list)[np.argsort(BJD_list)]
         for i,x in enumerate(wl_list):
             vel, flux = spt.lineProf(wl_list[i].data[order], flx_list[i].data[order], lbc=lbd0)
             #vel = vel + corr
-            vel_all.append(vel)
+            #vel_all.append(vel)
             #corr_all.append(corr)
             flux_all.append(flux)
             
             flag_all.append(flag)
+            # barycentric correction is more precise, but might be more difficult to apply
+            barycorr = sc.radial_velocity_correction(kind='barycentric', obstime=Time(BJD_list[i], format='jd'), location=obs_loc) 
+            barycorr = barycorr.value/1000.
+            barycorr_list.append(barycorr) 
+        
+            # heliocentric correction is easier, but less precise at a level of like 10 m/s
+            #heliocorr = sc.radial_velocity_correction(kind='heliocentric',obstime=Time(BJD_list[i], format='jd'), location=obs_loc) 
+            #helcorr_list.append(heliocorr.value* au.value / (60*60*24)/ 1000.0)
+            vl = vel + barycorr + vel * barycorr/(c.value / 1000.0)
+            vel_all.append(vl)
     
 
     
@@ -471,17 +488,14 @@ def get_halpha():
     vel_all = []
     MJD_all = []
     flag_all = []
+    corr_all = []
     ra = 84.9122543
     dec = -34.07410972
 
     line = 'Ha'
-    if line == 'Ha':
-        #USE = ['ESPaDOnS', 'BeSS', 'BeSOS', 'UVES', 'FEROS', 'OPD - Musicos', 'OPD - Ecass', 'NRES']
-        USE = ['NRES']
-    else:
-        USE = ['ESPaDOnS','BeSOS', 'FEROS']
-    
-    
+
+    USE = ['ESPaDOnS', 'BeSS', 'BeSOS', 'UVES', 'FEROS', 'OPD - Musicos', 'OPD - Ecass', 'NRES']
+    #USE = ['NRES']
     
     lbd0 = 656.28
     
@@ -514,15 +528,19 @@ def get_halpha():
             
             lat = fits_header['LATITUDE']
             lon = fits_header['LONGITUD']
+            ht = 4200 #m
+            obs_loc = EarthLocation.from_geodetic(lat=lat*u.deg, lon=lon*u.deg, height=ht*u.m)
+            sc = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
             lbd = fits_data[0, :]
             ordem = lbd.argsort()
             lbd = lbd[ordem]
             flux_norm = fits_data[1, ordem]
             vel, flux = spt.lineProf(lbd, flux_norm, lbc=lbd0)
-            #cut = asas(vel, flux, line)
-            #cut_all.append(cut)
+            barycorr = sc.radial_velocity_correction(kind='barycentric', obstime=Time(MJD[n], format='mjd'), location=obs_loc) 
+            barycorr = barycorr.value/1000.
+            print(barycorr)
             vel_all.append(vel)
-            #corr_all.append(corr)
+            corr_all.append(barycorr)
             flux_all.append(flux)
             MJD_all.append(MJD[n])
             flag_all.append(flag)
@@ -761,21 +779,13 @@ def get_halpha():
             flag_all.append(flag)
     
         
-    
+    barycorr_list = []
     flag = 'NRES'
     if flag in USE:
         lines = glob(direc+'Dropbox/Amanda/Data/NRES/*fits*')
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
         
-        #lat = -29.257778
-        #lon = -70.736667
-        
-        # FROM HEADER
-        ###################################################################
-        #HISTORY  'BARY_CORR'      ,'R*4 '   ,    1,    1,'5E14.7',' ',' '               
-        #HISTORY  -1.5192770E+01     
-        ###################################################################
         order = linesDict.line_names['Ha'][0]
         wl_list = []
         flx_list = []
@@ -790,6 +800,9 @@ def get_halpha():
             MJD[n] = t.mjd
             DAY_OBS = headers['DATE-OBS']
             SITE = headers['SITE']
+            LONG1 = headers['LONG1']
+            LAT1= headers['LAT1']
+            HT1 = headers['HT1']
             
             SpecRaw = hdulist[1]
             SpecFlat = hdulist[2]
@@ -806,18 +819,30 @@ def get_halpha():
             #flx_list.append(SpecBlaze)
             BJD_list.append(BJD_mid_exp)
             MJD_all.append(MJD[n])
-            
+            obs_loc = EarthLocation.from_geodetic(lat=LAT1*u.deg, lon=LONG1*u.deg, height=HT1*u.m)
+            sc = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
+
         wl_list = np.array(wl_list)[np.argsort(BJD_list)]
         flx_list = np.array(flx_list)[np.argsort(BJD_list)]
         BJD_list = np.array(BJD_list)[np.argsort(BJD_list)]
         for i,x in enumerate(wl_list):
             vel, flux = spt.lineProf(wl_list[i].data[order], flx_list[i].data[order], lbc=lbd0)
             #vel = vel + corr
-            vel_all.append(vel)
+            #vel_all.append(vel)
             #corr_all.append(corr)
             flux_all.append(flux)
             
             flag_all.append(flag)
+            # barycentric correction is more precise, but might be more difficult to apply
+            barycorr = sc.radial_velocity_correction(kind='barycentric', obstime=Time(BJD_list[i], format='jd'), location=obs_loc) 
+            barycorr = barycorr.value/1000.
+            barycorr_list.append(barycorr) 
+        
+            # heliocentric correction is easier, but less precise at a level of like 10 m/s
+            #heliocorr = sc.radial_velocity_correction(kind='heliocentric',obstime=Time(BJD_list[i], format='jd'), location=obs_loc) 
+            #helcorr_list.append(heliocorr.value* au.value / (60*60*24)/ 1000.0)
+            vl = vel + barycorr + vel * barycorr/(c.value / 1000.0)
+            vel_all.append(vl)
     
     return MJD_all, vel_all, flux_all, flag_all
     
