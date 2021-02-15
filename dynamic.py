@@ -44,6 +44,7 @@ import pandas as pd
 from scipy.interpolate import griddata
 from matplotlib.colorbar import Colorbar
 import seaborn as sns
+from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
 sns.set_style("white", {"xtick.major.direction": 'in',
               "ytick.major.direction": 'in'})
@@ -56,9 +57,9 @@ sns.set_style("white", {"xtick.major.direction": 'in',
 def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin, vmax, set_limits, phase_folded, P, t0):
 
     #resolution = 0.5 #days
-    
+    velmin, velmax = -450, 450
     flx_all=[]
-    temp = np.arange(-750, +750, 1)
+    temp = np.arange(velmin, velmax, 1)
 
     
     MJD_to_sort = np.array(MJD_all)
@@ -72,7 +73,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
     #print(vel_all)
     #print(flux_all)
     for i in range(len(flux_all)):
-        # interpolates specrum on 'temp', from -850 to 850 km/s, so they all have the same size :)
+        # interpolates specrum on 'temp' so they all have the same size :)
         flx = griddata(vel_all[i], flux_all[i], temp, method='linear')
         #plt.plot(vel_all[i], flux_all[i], linewidth=0.4, label=MJD_all[i])
         flx_all.append(flx)
@@ -87,18 +88,19 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
     #plt.legend()
     #plt.show()
     # colormap for the dynamic spectra
-    my_cmap = mpl.cm.magma
+    my_cmap = mpl.cm.viridis
     #print(len(MJD_all))
     #im so good at names
     hello = np.mean(flx_all, axis=0)
 
     supes = []
     
-    # this stacks copies of the flux arrays. basically, makes the lines thicker
+
     for j in range(len(flx_all)):
-        superflux = np.tile(flx_all[j]-hello, (1, 1))
+        #superflux = np.tile(flx_all[j]-hello, (1, 1))
+        superflux = flx_all[j]-hello
         #superflux = np.tile(flx_all[j], (1, 1))
-        supes.append(superflux)
+        supes.append((superflux + 1)**2 - 1 )
 
     
 
@@ -139,12 +141,12 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
         phase = phase/resolution
         
         size_time = np.arange(phase.min(), phase.max(), 1)
-        size_time = np.concatenate([size_time, [phase.max()]])
+        #size_time = np.concatenate([size_time])#, [phase.max()]])
         size_time = size_time - int(phase.min())
         print(len(size_time))
         print(size_time)
         
-        master = np.zeros([len(size_time)+1, len(hello)])
+        master = np.zeros([len(size_time), len(hello)])
         data_positions = []
         
         for k in range(len(phase)):
@@ -161,7 +163,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
         master = np.tile(master, (2,1))
         print(len(master))
         set_time_limits = [2, 0]
-        set_time_label = 'Phase'
+        set_time_label = 'Phase (P = {:.2f})'.format(P)
         
     
     
@@ -175,23 +177,28 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
     gs1.update(hspace=0.00, wspace=0.025)#, top=0.9)
 
     
-    fig.subplots_adjust(right=0.8)
+    #fig.subplots_adjust(right=0.8)
     
     
     
     ax = plt.subplot(gs1[2, 0])
-    cbax = fig.add_axes([.85, 0.25, 0.03, 0.5])
+    #cbax = fig.add_axes([.85, 0.25, 0.03, 0.5])
     if set_limits:
-        img1 = ax.imshow(masked_array, cmap = my_cmap,interpolation='nearest', extent = [-800., 800, set_time_limits[0], set_time_limits[1]],aspect='auto' , vmin=vmin, vmax=vmax)
+        img1 = ax.imshow(masked_array, cmap = my_cmap,interpolation='nearest', extent = [velmin, velmax, set_time_limits[0], set_time_limits[1]],aspect='auto' , vmin=vmin, vmax=vmax)
     else:
-        img1 = ax.imshow(masked_array, cmap = my_cmap,interpolation='nearest', extent = [-800., 800, set_time_limits[0], set_time_limits[1]],aspect='auto')
-    cb = Colorbar(ax = cbax, mappable = img1)#, orientation = 'horizontal', ticklocation = 'bottom')
-    cb.set_label('Intensity')
+        img1 = ax.imshow(masked_array, cmap = my_cmap,interpolation='nearest', extent = [velmin, velmax, set_time_limits[0], set_time_limits[1]],aspect='auto')
+    
+    ax_divider = make_axes_locatable(ax)
+    # add an axes above the main axes.
+    cbax = ax_divider.append_axes("top", size="5%", pad="2%")
+    #cb = colorbar(im2, cax=cax2, orientation="horizontal")
+    cb = Colorbar(ax = cbax, mappable = img1, orientation = 'horizontal', ticklocation = 'top')
+    cb.set_label('Intensity', fontsize=11)
     #cb.set_clim(-0.1, 0.1)
     
     plt.setp(ax.get_xticklabels(), visible=False)
     ax.set_ylabel(set_time_label)
-    ax.set_title(line)
+    #ax.set_title(line)
     
     #temp2 = np.arange(-850, +850, 0.2)
     #
@@ -208,11 +215,23 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, flag_all, resolution, vmin
     ax2.set_ylabel('Flux')#, fontsize=13)
     ax2.set_xlabel('$\mathrm{Velocity\,[km\,s^{-1}]}$')
     nbins = 4
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=8, prune='upper'))
     ax2.yaxis.set_major_locator(MaxNLocator(nbins=nbins, prune='upper'))
     hello = np.mean(flx_all, axis=0)
-    ax2.plot(temp, hello, color = my_cmap(.25))
-    ax2.set_xlim(-800, 800)
     
+    for flxs in flx_all:
+        ax2.plot(temp, flxs, color = 'gray', alpha=0.3, lw=0.5)
+    ax2.plot(temp, hello, color = my_cmap(.25), lw=2)
+    ax2.set_xlim(velmin, velmax)
+    
+    ax.axvline(-200, ls=':', color='k', lw=0.5)
+    ax.axvline(200, ls=':', color='k', lw=0.5)
+    ax2.axvline(-200, ls=':', color='k', lw=0.5)
+    ax2.axvline(200, ls=':', color='k', lw=0.5)
+    #ax.yaxis.grid(False) # Hide the horizontal gridlines
+    #ax2.yaxis.grid(False) # Hide the horizontal gridlines
+    #ax.xaxis.grid(True) # Show the vertical gridlines
+    #ax2.xaxis.grid(True) # Show the vertical gridlines
     
     plt.savefig(line+"_dynamic.png", dpi=100, bbox_inches='tight')
     

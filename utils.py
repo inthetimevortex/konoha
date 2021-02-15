@@ -7,6 +7,20 @@ from astropy.stats import median_absolute_deviation as MAD
 from astropy.convolution import convolve, Box1DKernel
 import jdcal
 import datetime as dt
+from scipy.interpolate import UnivariateSpline
+
+def sigma_spectra(vel, flux, mask):
+    ''' Uses the std of the residue of the continuum fit as 
+    a way to estimate sigma for spectra'''
+    
+    spl_weight = np.zeros(len(vel))
+    spl_weight[mask] = 1.
+    spl_fit = UnivariateSpline(vel, flux, w=spl_weight, k=3)
+    flx_norm = flux/spl_fit(vel)
+    
+    residue = flux[mask]-spl_fit(vel)[mask]
+    sigma = np.std(residue)
+    return sigma
 
 def gentkdates(mjd0, mjd1, fact, step, dtstart=None):
     """ Generates round dates between > mjd0 and < mjd1 in a given step.
