@@ -5,7 +5,6 @@ functions for color correction
 import os
 import sys
 import numpy as np
-import pyfits
 import atpy
 import pyhdust.phc as phc
 import pyhdust.beatlas as bat
