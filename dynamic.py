@@ -44,6 +44,7 @@ from scipy.interpolate import griddata
 from matplotlib.colorbar import Colorbar
 import seaborn as sns
 import copy
+from icecream import ic
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
 sns.set_style("ticks", {"xtick.major.direction": 'in',
@@ -141,8 +142,8 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
         size_time = np.arange(phase.min(), phase.max(), 1)
         #size_time = np.concatenate([size_time])#, [phase.max()]])
         size_time = size_time - int(phase.min())
-        print(len(size_time))
-        print(size_time)
+        #print(len(size_time))
+        #print(size_time)
 
         master = np.zeros([len(size_time), len(hello)])
         data_positions = []
@@ -157,9 +158,20 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
             flx_pos = np.sum(np.array(supes)[pos], axis=0)/len(pos)
 
             master[final_pos] = flx_pos
-        print(len(master))
-        master = np.tile(master, (2,1))
-        print(len(master))
+
+        s_master=np.zeros([96, len(hello)])
+        for cc in range(0,96):
+            phase_range = [0.01*cc, 0.01*cc+ 0.05]
+            ic(phase_range)
+            s_mask = np.ma.masked_inside(phase_keep, phase_range[0], phase_range[1]).mask
+            ic(phase_keep[s_mask])
+            s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0)/len(np.array(supes)[s_mask])
+            s_master[cc] = s_flx_pos
+
+        #print(len(master))
+        # 2 phases
+        master = np.tile(s_master, (2,1))
+        #print(len(master))
         set_time_limits = [2, 0]
         set_time_label = 'Phase (P = {:.2f})'.format(P)
 
@@ -246,7 +258,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
     #ax.xaxis.grid(True) # Show the vertical gridlines
     #ax2.xaxis.grid(True) # Show the vertical gridlines
 
-    plt.savefig(line+"_dynamic.pdf", dpi=100, bbox_inches='tight')
+    plt.savefig(line+"_dynamic_s.pdf", dpi=100, bbox_inches='tight')
 
 
     #temp2 = np.arange(-850, +850, 0.2)
