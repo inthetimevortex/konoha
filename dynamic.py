@@ -162,9 +162,9 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
         s_master=np.zeros([96, len(hello)])
         for cc in range(0,96):
             phase_range = [0.01*cc, 0.01*cc+ 0.05]
-            ic(phase_range)
+            #ic(phase_range)
             s_mask = np.ma.masked_inside(phase_keep, phase_range[0], phase_range[1]).mask
-            ic(phase_keep[s_mask])
+            #ic(phase_keep[s_mask])
             s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0)/len(np.array(supes)[s_mask])
             s_master[cc] = s_flx_pos
 
@@ -216,7 +216,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
     sine = np.sin(X2)
     amp=55.9
 
-    ax.plot(amp*sine, t, color='xkcd:darkish red', lw=0.6)
+    #ax.plot(amp*sine, t, color='xkcd:darkish red', lw=0.6)
     #amp=4.
     #ax.plot(amp*sine, t, color='xkcd:strawberry', lw=0.6)
 

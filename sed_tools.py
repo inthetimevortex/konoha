@@ -57,14 +57,14 @@ def color_corr(lbd, flux, flag):
     Usage:
     flux_corr = color_corr(lbd, flux, flag):
     '''
-    from goodboi import integral, poly_interp
+    from .utils import integral, poly_interp
 
     # make sure input are numpy arrays
     lbd = np.array([lbd]).reshape((-1))
     flux = np.array([flux]).reshape((-1))
 
     # path to bandpasses transmission files
-    dir0 = 'defs/'
+    dir0 = '/home/amanda/anaconda3/lib/python3.7/site-packages/konoha/defs/'
 
     # either select filter files, or apply default correction
     # for single fluxes
@@ -142,9 +142,9 @@ def color_corr(lbd, flux, flag):
     flux_corr = flux / K
 
     return flux_corr
-    
-    
-    
+
+
+
 
 
 # VOSA TO CATALOGUE VALUES
@@ -222,4 +222,3 @@ def vosa2catvalues(lbd, flux, flag):
         lcat, fcat = lbd, flux
 
     return lcat, fcat
-    
