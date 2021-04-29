@@ -44,6 +44,7 @@ from scipy.interpolate import griddata
 from matplotlib.colorbar import Colorbar
 import seaborn as sns
 import copy
+from scipy import stats
 from icecream import ic
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
@@ -52,13 +53,17 @@ sns.set_style("ticks", {"xtick.major.direction": 'in',
 
 
 
-
+def normalize(v):
+    norm = np.linalg.norm(v)
+    if norm == 0:
+       return v
+    return v / norm
 
 #vel_all, flux_all, MJD_all, flag_all = get_halpha()
-def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, set_limits, phase_folded, P, t0):
+def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, set_limits, phase_folded, P, t0, velmin, velmax):
 
     #resolution = 0.5 #days
-    velmin, velmax = -450, 450
+
     flx_all=[]
     temp = np.arange(velmin, velmax, 1)
 
@@ -107,8 +112,10 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
     MJD_a = MJD_all[sort]
     #print(len(MJD_a), len(MJD_all))
     MJD_a = MJD_a - min(MJD_a)
+    MJD_keep = np.copy(MJD_a)
     phase = (MJD_a-t0)/P %1
     phase_keep = np.copy(phase)
+    #ic(phase_keep)
 
 
     if not phase_folded:
@@ -133,8 +140,20 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
 
             master[final_pos] = flx_pos
 
+        # s_master=np.zeros([93, len(hello)])
+        # MJD_norm = normalize(MJD_keep)
+        # #MJD_range = np.arange(MJD_keep[0], MJD_keep[-1], 96)
+        # for cc in range(0,93):
+        #     MJD_range = [0.01*cc, 0.01*cc+ 0.08]
+        #     ic(MJD_range)
+        #     s_mask = np.ma.masked_inside(MJD_norm, MJD_range[0], MJD_range[1]).mask
+        #     ic(MJD_keep[s_mask])
+        #     s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0)/len(np.array(supes)[s_mask])
+        #     s_master[cc] = s_flx_pos
+        # master = np.copy(s_master)
         set_time_limits = [MJD_all.max(), MJD_all.min()]
         set_time_label = 'MJD'
+
 
     else:
         phase = phase/resolution
@@ -159,9 +178,9 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
 
             master[final_pos] = flx_pos
 
-        s_master=np.zeros([96, len(hello)])
-        for cc in range(0,96):
-            phase_range = [0.01*cc, 0.01*cc+ 0.05]
+        s_master=np.zeros([93, len(hello)])
+        for cc in range(0,93):
+            phase_range = [0.01*cc, 0.01*cc+ 0.08]
             #ic(phase_range)
             s_mask = np.ma.masked_inside(phase_keep, phase_range[0], phase_range[1]).mask
             #ic(phase_keep[s_mask])
@@ -233,7 +252,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
 
 
     ax2 = plt.subplot(gs1[3, 0])
-    ax2.set_ylabel('Flux')#, fontsize=13)
+    ax2.set_ylabel('Norm. flux', fontsize=9)
     ax2.set_xlabel('$\mathrm{Velocity\,[km\,s^{-1}]}$')
     nbins = 4
     ax.yaxis.set_major_locator(MaxNLocator(nbins=8, prune='upper'))
@@ -248,11 +267,12 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
 
     ax2.plot(temp, hello, color = my_cmap(.25), lw=2)
     ax2.set_xlim(velmin, velmax)
+    ax2.set_ylim(0., 4.)
 
-    ax.axvline(-200, ls=':', color='k', lw=0.5)
-    ax.axvline(200, ls=':', color='k', lw=0.5)
-    ax2.axvline(-200, ls=':', color='k', lw=0.5)
-    ax2.axvline(200, ls=':', color='k', lw=0.5)
+    #ax.axvline(-200, ls=':', color='k', lw=0.5)
+    #ax.axvline(200, ls=':', color='k', lw=0.5)
+    #ax2.axvline(-200, ls=':', color='k', lw=0.5)
+    #ax2.axvline(200, ls=':', color='k', lw=0.5)
     #ax.yaxis.grid(False) # Hide the horizontal gridlines
     #ax2.yaxis.grid(False) # Hide the horizontal gridlines
     #ax.xaxis.grid(True) # Show the vertical gridlines
