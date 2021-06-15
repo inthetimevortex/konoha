@@ -72,8 +72,8 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
     sort = MJD_to_sort.argsort()
     MJD_all = np.array(MJD_to_sort)[sort]
     #flag_all = np.array(flag_all)[sort]
-    vel_all = np.array(vel_all,dtype=object)[sort]
-    flux_all = np.array(flux_all,dtype=object)[sort]
+    vel_all = np.array(vel_all)[sort]
+    flux_all = np.array(flux_all)[sort]
     #print(len(MJD_all))
     #print(vel_all)
     #print(flux_all)
@@ -84,7 +84,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
         flx_all.append(flx)
     #print(flx_all)
     flxx = np.array(flx_all)
-    keep = np.logical_not(np.isnan(np.array(flx_all)))[:,0]
+    keep = np.logical_not(np.isnan(flx_all))[:,0]
     flx_all = flxx[keep]
     vel_all = vel_all[keep]
     MJD_all = MJD_all[keep]
@@ -267,7 +267,7 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
 
     ax2.plot(temp, hello, color = my_cmap(.25), lw=2)
     ax2.set_xlim(velmin, velmax)
-    ax2.set_ylim(0., 4.)
+    #ax2.set_ylim(0., 4.)
 
     #ax.axvline(-200, ls=':', color='k', lw=0.5)
     #ax.axvline(200, ls=':', color='k', lw=0.5)

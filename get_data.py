@@ -27,7 +27,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.patches as mpatches
 import pyhdust as phd
-from astropy.io import fits
+from astropy.io import fits as fits
 from astropy.time import Time
 from astropy import units as u
 from astropy.coordinates import SkyCoord, EarthLocation
@@ -53,6 +53,8 @@ sns.set_style("white", {"xtick.major.direction": 'in',
 PCname = socket.gethostname()
 if PCname == 'Pakkun':
     direc = '/Users/amanda/Drive/'
+elif PCname == 'bisuke.local':
+    direc = '/Users/student/GoogleDrive/'
 else:
     direc = '/home/amanda/'
 
@@ -72,7 +74,7 @@ def get_iue():
     dflux_iue = np.array([])
     for i in range(len(flist)):
         fname = flist[i]
-        hdr_list = pyfits.open(fname)
+        hdr_list = fits.open(fname)
         fits_data = hdr_list[1].data
         fits_header = hdr_list[0].header
         lbd_iue = np.hstack([lbd_iue, 1e-4*fits_data['WAVELENGTH']])
@@ -187,7 +189,7 @@ def get_lines(line):
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -224,7 +226,7 @@ def get_lines(line):
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -258,7 +260,7 @@ def get_lines(line):
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -303,7 +305,7 @@ def get_lines(line):
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdulist = pyfits.open(fname)
+            hdulist = fits.open(fname)
             # print column information
             #hdulist[1].columns
             # get to the data part (in extension 1)
@@ -340,7 +342,7 @@ def get_lines(line):
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -383,7 +385,7 @@ def get_lines(line):
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -427,8 +429,8 @@ def get_lines(line):
             hdulist = fits.open(fname)
             headers = hdulist[0].header
             BJD_mid_exp = headers['BJD']
-            t = Time(BJD_mid_exp, format = 'jd', scale='utc')
-            MJD[n] = t.mjd
+            #t = Time(BJD_mid_exp, format = 'jd', scale='utc')
+            #MJD[n] = t.mjd
             DAY_OBS = headers['DATE-OBS']
             SITE = headers['SITE']
             LONG1 = headers['LONG1']
@@ -448,7 +450,7 @@ def get_lines(line):
             flx_list.append(SpecFlat)
             #flx_list.append(SpecBlaze)
             BJD_list.append(BJD_mid_exp)
-            MJD_all.append(MJD[n])
+
             obs_loc = EarthLocation.from_geodetic(lat=LAT1*u.deg, lon=LONG1*u.deg, height=HT1*u.m)
             sc = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
         wl_list = np.array(wl_list)[np.argsort(BJD_list)]
@@ -460,6 +462,9 @@ def get_lines(line):
             #vel_all.append(vel)
             #corr_all.append(corr)
             flux_all.append(flux)
+            t = Time(BJD_list[i], format = 'jd', scale='utc')
+            MJD[n] = t.mjd
+            MJD_all.append(MJD[n])
 
             flag_all.append(flag)
             # barycentric correction is more precise, but might be more difficult to apply
@@ -517,7 +522,7 @@ def get_halpha():
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #f = open('{0}_{1}.txt'.format(flag, n), 'wb')
@@ -563,7 +568,7 @@ def get_halpha():
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -600,7 +605,7 @@ def get_halpha():
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -634,7 +639,7 @@ def get_halpha():
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -679,7 +684,7 @@ def get_halpha():
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdulist = pyfits.open(fname)
+            hdulist = fits.open(fname)
             # print column information
             #hdulist[1].columns
             # get to the data part (in extension 1)
@@ -694,11 +699,13 @@ def get_halpha():
             #vel = vel + corr
             #cut = asas(vel, flux, line)
             #cut_all.append(cut)
-            vel_all.append(vel)
-            #corr_all.append(corr)
-            flux_all.append(flux)
-            MJD_all.append(MJD[n])
-            flag_all.append(flag)
+            if MJD[n] not in [53012.15712866, 53012.17133498]:
+                #print(MJD[n])
+                vel_all.append(vel)
+                #corr_all.append(corr)
+                flux_all.append(flux)
+                MJD_all.append(MJD[n])
+                flag_all.append(flag)
 
 
 
@@ -716,7 +723,7 @@ def get_halpha():
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -759,7 +766,7 @@ def get_halpha():
         for n in range(len(lines)):
             fname = lines[n]
             # read fits
-            hdr_list = pyfits.open(fname)
+            hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
             #fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
@@ -795,8 +802,7 @@ def get_halpha():
             hdulist = fits.open(fname)
             headers = hdulist[0].header
             BJD_mid_exp = headers['BJD']
-            t = Time(BJD_mid_exp, format = 'jd', scale='utc')
-            MJD[n] = t.mjd
+
             DAY_OBS = headers['DATE-OBS']
             SITE = headers['SITE']
             LONG1 = headers['LONG1']
@@ -817,7 +823,7 @@ def get_halpha():
             flx_list.append(SpecFlat)
             #flx_list.append(SpecBlaze)
             BJD_list.append(BJD_mid_exp)
-            MJD_all.append(MJD[n])
+            #MJD_all.append(MJD[n])
             obs_loc = EarthLocation.from_geodetic(lat=LAT1*u.deg, lon=LONG1*u.deg, height=HT1*u.m)
             sc = SkyCoord(ra=ra*u.deg, dec=dec*u.deg)
 
@@ -830,7 +836,9 @@ def get_halpha():
             #vel_all.append(vel)
             #corr_all.append(corr)
             flux_all.append(flux)
+            t = Time(BJD_list[i], format = 'jd', scale='utc')
 
+            MJD_all.append(t.mjd)
             flag_all.append(flag)
             # barycentric correction is more precise, but might be more difficult to apply
             barycorr = sc.radial_velocity_correction(kind='barycentric', obstime=Time(BJD_list[i], format='jd'), location=obs_loc)
