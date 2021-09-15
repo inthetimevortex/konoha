@@ -7,17 +7,121 @@ from astropy.stats import median_absolute_deviation as MAD
 from astropy.convolution import convolve, Box1DKernel
 import jdcal
 import datetime as dt
+import struct as struct
 from scipy.interpolate import UnivariateSpline
 
+def readpck(n, tp, ixdr, f):
+    """ Read XDR
+
+    - n: length
+    - tp: type ('i', 'l', 'f', 'd')
+    - ixdr: counter
+    - f: file-object
+
+    :returns: ixdr (counter), np.array
+    """
+    sz = dict(zip(['i', 'l', 'f', 'd'], [4, 4, 4, 8]))
+    s = sz[tp]
+    upck = '>{0}{1}'.format(n, tp)
+    return ixdr+n*s, np.array(struct.unpack(upck, f[ixdr:ixdr+n*s]))
+
+def readXDRsed(xdrpath, quiet=False):
+    """  Read a XDR with a set of models.
+
+    The models' parameters (as well as their units) are defined at XDR
+    creation.
+
+    INPUT: xdrpath
+
+    OUTPUT: ninfo, intervals, lbdarr, minfo, models
+
+    (xdr dimensions, params limits, lambda array (um), mods params, mods flux)
+    """
+    ixdr = 0
+    f = open(xdrpath, 'rb').read()
+    ixdr, ninfo = readpck(3, 'l', ixdr, f)
+    nq, nlbd, nm = ninfo
+    ixdr, intervals = readpck(nq*2, 'f', ixdr, f)
+    ixdr, lbdarr = readpck(nlbd, 'f', ixdr, f)
+    ixdr, listpar = readpck(nq*nm, 'f', ixdr, f)
+    ixdr, models = readpck(nlbd*nm, 'f', ixdr, f)
+    #
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(xdrpath))
+    else:
+        _warn.warn('# XDR {0} not completely read!\n# length '
+            'difference is {1} /4'.format(xdrpath), (len(f)-ixdr) )
+    #
+    return ( ninfo, intervals.reshape((nq, 2)), lbdarr,
+        listpar.reshape((nm, nq)), models.reshape((nm, nlbd)) )
+
+
+def readBAsed(xdrpath, quiet=False):
+    """ Read **only** the BeAtlas SED release.
+
+    | Definitions:
+    | -photospheric models: sig0 (and other quantities) == 0.00
+    | -Parametric disk model default (`param` == True)
+    | -VDD-ST models: n excluded (alpha and R0 fixed. Confirm?)
+    | -The models flux are given in ergs/s/cm2/um. If ignorelum==True in the
+    |   XDR creation, F_lbda/F_bol unit will be given.
+
+    INPUT: xdrpath
+
+    | OUTPUT: listpar, lbdarr, minfo, models
+    | (list of mods parameters, lambda array (um), mods index, mods flux)
+    """
+    f = open(xdrpath, 'rb').read()
+    ixdr = 0
+    #
+    npxs = 3
+    upck = '>{0}l'.format(npxs)
+    header = np.array(struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) )
+    ixdr += npxs * 4
+    nq, nlb, nm = header
+    #
+    npxs = nq
+    upck = '>{0}l'.format(npxs)
+    header = np.array(struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) )
+    ixdr += npxs * 4
+    #
+    listpar = [[] for i in range(nq)]
+    for i in range(nq):
+        npxs = header[i]
+        upck = '>{0}f'.format(npxs)
+        listpar[i] = np.array(struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) )
+        ixdr += npxs * 4
+    #
+    npxs = nlb
+    upck = '>{0}f'.format(npxs)
+    lbdarr = np.array(struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) )
+    ixdr += npxs * 4
+    #
+    npxs = nm * (nq + nlb)
+    upck = '>{0}f'.format(npxs)
+    models = np.array(struct.unpack(upck, f[ixdr:ixdr + npxs * 4]) )
+    ixdr += npxs * 4
+    models = models.reshape((nm, -1))
+    # this will check if the XDR is finished.
+    if ixdr == len(f):
+        if not quiet:
+            print('# XDR {0} completely read!'.format(xdrpath))
+    else:
+        _warn.warn('# XDR {0} not completely read!\n# length '
+            'difference is {1}'.format(xdrpath, (len(f)-ixdr)/4) )
+    #
+    return listpar, lbdarr, models[:, 0:nq], models[:, nq:]
+
 def sigma_spectra(vel, flux, mask):
-    ''' Uses the std of the residue of the continuum fit as 
+    ''' Uses the std of the residue of the continuum fit as
     a way to estimate sigma for spectra'''
-    
+
     spl_weight = np.zeros(len(vel))
     spl_weight[mask] = 1.
     spl_fit = UnivariateSpline(vel, flux, w=spl_weight, k=3)
     flx_norm = flux/spl_fit(vel)
-    
+
     residue = flux[mask]-spl_fit(vel)[mask]
     sigma = np.std(residue)
     return sigma
@@ -96,17 +200,17 @@ def Sliding_Outlier_Removal(x, y, window_size, sigma=3.0, iterate=1, replace_pts
     # remove NANs from the data
     x = x[~np.isnan(y)]
     y = y[~np.isnan(y)]
-    
-    #make sure that the arrays are in order according to the x-axis 
+
+    #make sure that the arrays are in order according to the x-axis
     y = y[np.argsort(x)]
     x = x[np.argsort(x)]
-    
+
     index_of_all_clipped = np.array([])
-    
+
     window_size_original = window_size
-    
+
     # tells you the difference between the last and first x-value
-    x_span = x.max() - x.min()  
+    x_span = x.max() - x.min()
     i = 0
     x_final = x
     y_final = y
@@ -114,73 +218,73 @@ def Sliding_Outlier_Removal(x, y, window_size, sigma=3.0, iterate=1, replace_pts
         i+=1
         x = x_final
         y = y_final
-        
+
         # empty arrays that I will append not-clipped data points to
         x_good_ = np.array([])
         y_good_ = np.array([])
-        
+
         # used to calculate the average standard deviation in the bins in each iteration
         std_of_bins = []
-        
+
         # Creates an array with all_entries = True. index where you want to remove outliers are set to False
         tf_ar = np.full((len(x),), True, dtype=bool)
         ar_of_index_of_bad_pts = np.array([]) #not used anymore
-        
+
         #this is how many days (or rather, whatever units x is in) to slide the window center when finding the outliers
-        slide_by = window_size / 5.0 
-        
+        slide_by = window_size / 5.0
+
         #calculates the total number of windows that will be evaluated
         Nbins = int((int(x.max()+1) - int(x.min()))/slide_by)
-        
+
         if i == 1:
             box_jitter = 0
         else:
             box_jitter = np.random.uniform(-0.125,0.125)
             box_jitter = 0
             window_size = window_size * (1 - 0.01*i)
-        
+
         if window_size / window_size_original < 0.2:
             window_size = window_size_original*0.2
-        #print('window size = {0}'.format(window_size))    
-        
+        #print('window size = {0}'.format(window_size))
+
         for j in range(Nbins+1):
-            
-    
-            
+
+
+
             #find the minimum time in this bin, and the maximum time in this bin
             x_bin_min = x.min()+j*(slide_by)-0.5*window_size + box_jitter*window_size
             x_bin_max = x.min()+j*(slide_by)+0.5*window_size + box_jitter*window_size
-            
+
             # gives you just the data points in the window
             x_in_window = x[(x>x_bin_min) & (x<x_bin_max)]
             y_in_window = y[(x>x_bin_min) & (x<x_bin_max)]
-            
+
             # if there are less than 5 points in the window, do not try to remove outliers.
             if len(y_in_window) > 5:
-                
+
                 # Removes a linear trend from the y-data that is in the window.
                 y_detrended = detrend(y_in_window, type='linear')
                 y_in_window = y_detrended
-                
+
                 # Records the standard deviation in the data in the box after the linear fit is subtracted
                 std_of_bins.append(np.std(y_in_window))
-                
+
                 #print(np.median(m_in_window_))
                 y_med = np.median(y_in_window)
-                
+
                 # finds the Median Absolute Deviation of the y-pts in the window
                 y_MAD = MAD(y_in_window)
-                
-                #This mask returns the not-clipped data points. 
+
+                #This mask returns the not-clipped data points.
                 # Maybe it is better to only keep track of the data points that should be clipped...
                 mask_a = (y_in_window < y_med+y_MAD*sigma) & (y_in_window > y_med-y_MAD*sigma)
                 #print(str(np.sum(mask_a)) + '   :   ' + str(len(m_in_window)))
                 y_good = y_in_window[mask_a]
                 x_good = x_in_window[mask_a]
-                
+
                 y_bad = y_in_window[~mask_a]
                 x_bad = x_in_window[~mask_a]
-                
+
                 #keep track of the index --IN THE ORIGINAL FULL DATA ARRAY-- of pts to be clipped out
                 try:
                     clipped_index = np.where([x == z for z in x_bad])[1]
@@ -190,33 +294,33 @@ def Sliding_Outlier_Removal(x, y, window_size, sigma=3.0, iterate=1, replace_pts
                     #print('no data between {0} - {1}'.format(x_in_window.min(), x_in_window.max()))
                     pass
             # puts the 'good' not-clipped data points into an array to be saved
-            
+
             #x_good_= np.concatenate([x_good_, x_good])
             #y_good_= np.concatenate([y_good_, y_good])
-            
+
             #print(len(mask_a))
             #print(len(m
             #print(m_MAD)
-        
-        ##multiple data points will be repeated! We don't want this, so only keep unique values. 
+
+        ##multiple data points will be repeated! We don't want this, so only keep unique values.
         #x_uniq, x_u_indexs = np.unique(x_good_, return_index=True)
         #y_uniq = y_good_[x_u_indexs]
-        
+
         ar_of_index_of_bad_pts = np.unique(ar_of_index_of_bad_pts)
         #print('step {0}: remove {1} points. Mean STD = {2:.5f}'.format(i, len(ar_of_index_of_bad_pts), np.mean(std_of_bins)))
         index_of_all_clipped = np.concatenate((index_of_all_clipped,ar_of_index_of_bad_pts))
         #print(ar_of_index_of_bad_pts)
-        
+
         #x_bad = x[ar_of_index_of_bad_pts]
         #y_bad = y[ar_of_index_of_bad_pts]
         #x_final = x[
-        
+
         x_final = x[tf_ar]
         y_final = y[tf_ar]
-    
+
     #trying to replace the clipped points with something sensible, rather than simply removing them
-    index_of_all_clipped = np.unique(index_of_all_clipped)      
-    
+    index_of_all_clipped = np.unique(index_of_all_clipped)
+
     return(x_final, y_final, index_of_all_clipped)
 
 
@@ -243,14 +347,14 @@ def integral(x, f, cummulative=False):
         integ = np.trapz(f, x=x)
 
     return integ
-    
-# ==============================================================================  
-    
+
+# ==============================================================================
+
 def poly_interp(xi, yi, x):
     '''
     For N pair of points, interpolates a polynomial
     of (N-1) order
-   
+
     xi, yi: original data points
     x , y : interpolated values (x is an input)
 
@@ -397,7 +501,7 @@ def find_neighbours(par, par_grid, ranges):
 
 
 # ==============================================================================
-def geneva_interp_fast(Par, oblat, t, neighbours_only=True, isRpole=False):
+def geneva_interp_fast_old(Par, oblat, t, neighbours_only=True, isRpole=False):
     '''
     Interpolates Geneva stellar models, from grid of
     pre-computed interpolations.
@@ -497,6 +601,70 @@ def geneva_interp_fast(Par, oblat, t, neighbours_only=True, isRpole=False):
 
     return Par_out, logL
 
+############################################################################
+def geneva_interp_fast(Mstar, oblat, t, Zstr='014', silent=True):
+    '''
+    Interpolates Geneva stellar models, from grid of
+    pre-computed interpolations.
+
+    Usage:
+    Rpole, logL, age = geneva_interp_fast(Mstar, oblat, t, Zstr='014')
+
+    where t is given in tMS, and tar is the open tar file. For now, only
+    Zstr='014' is available.
+    '''
+    # read grid
+    #dir0 = '{0}/refs/geneva_models/'.format(_hdtpath())
+    dir0 = '/home/amanda/Dropbox/Amanda/GRID/BEMCEE/defs/geneve_models/'
+    if Mstar <= 20.:
+        fname = 'geneva_interp_Z{:}.npz'.format(Zstr)
+    else:
+        fname = 'geneva_interp_Z{:}_highM.npz'.format(Zstr)
+    data = np.load(dir0 + fname)
+    Mstar_arr = data['Mstar_arr']
+    oblat_arr =data['oblat_arr']
+    t_arr = data['t_arr']
+    Rpole_grid = data['Rpole_grid']
+    logL_grid = data['logL_grid']
+    age_grid = data['age_grid']
+
+    # build grid of parameters
+    par_grid = []
+    for M in Mstar_arr:
+        for ob in oblat_arr:
+            for tt in t_arr:
+                par_grid.append([M, ob, tt])
+    par_grid = np.array(par_grid)
+
+    # set input/output parameters
+    par = np.array([Mstar, oblat, t])
+
+    # set ranges
+    ranges = np.array([[par_grid[:, i].min(), par_grid[:, i].max()] for i in range(len(par))])
+
+    # find neighbours
+    keep, out, inside_ranges, par, par_grid = find_neighbours(par, par_grid, ranges)
+
+    # interpolation method
+    if inside_ranges:
+        interp_method = 'linear'
+    else:
+        if not silent:
+            print('[geneva_interp_fast] Warning: parameters out of available range, taking closest model')
+        interp_method = 'nearest'
+
+    if len(keep[keep]) == 1:
+        # coincidence
+        Rpole = Rpole_grid.flatten()[keep][0]
+        logL = logL_grid.flatten()[keep][0]
+        age = age_grid.flatten()[keep][0]
+    else:
+        # interpolation
+        Rpole = griddata(par_grid[keep], Rpole_grid.flatten()[keep], par, method=interp_method, rescale=True)[0]
+        logL = griddata(par_grid[keep], logL_grid.flatten()[keep], par, method=interp_method, rescale=True)[0]
+        age = griddata(par_grid[keep], age_grid.flatten()[keep], par, method=interp_method, rescale=True)[0]
+
+    return Rpole, logL, age
 
 # ===============================================================================
 
@@ -568,9 +736,9 @@ def griddataBAtlas(minfo, models, params, listpar, dims, isig):
     lim_vals = len(params)*[ [], ]
     for i in [i for i in range(len(params)) if i != isig]:
         lim_vals[i] = [
-            phc.find_nearest(listpar[i], params[i], bigger=False), 
+            phc.find_nearest(listpar[i], params[i], bigger=False),
             phc.find_nearest(listpar[i], params[i], bigger=True)]
-        tmp = np.where((minfo[:, i] == lim_vals[i][0]) | 
+        tmp = np.where((minfo[:, i] == lim_vals[i][0]) |
                 (minfo[:, i] == lim_vals[i][1]))
         idx = np.intersect1d(idx, tmp)
         #
@@ -582,14 +750,14 @@ def griddataBAtlas(minfo, models, params, listpar, dims, isig):
         for i in [i for i in range(len(params)) if i != dims["sig0"]]:
             imin = lim_vals[i][0]
             if lim_vals[i][0] != np.min(listpar[i]):
-                imin = phc.find_nearest(listpar[i], lim_vals[i][0], 
+                imin = phc.find_nearest(listpar[i], lim_vals[i][0],
                     bigger=False)
             imax = lim_vals[i][1]
             if lim_vals[i][1] != np.max(listpar[i]):
-                imax = phc.find_nearest(listpar[i], lim_vals[i][1], 
+                imax = phc.find_nearest(listpar[i], lim_vals[i][1],
                     bigger=True)
             lim_vals[i] = [imin, imax]
-            tmp = np.where((minfo[:, i] >= lim_vals[i][0]) & 
+            tmp = np.where((minfo[:, i] >= lim_vals[i][0]) &
                 (minfo[:, i] <= lim_vals[i][1]))
             idx = np.intersect1d(idx, phc.flatten(tmp))
         out_interp = griddata(minfo[idx], models[idx], params)[0]

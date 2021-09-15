@@ -265,9 +265,9 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
     for flxs in flx_all:
         ax2.plot(temp, flxs, color='gray', alpha=0.3, lw=0.5)
 
-    ax2.plot(temp, hello, color = my_cmap(.25), lw=2)
+    #ax2.plot(temp, hello, color = my_cmap(.25), lw=2)
     ax2.set_xlim(velmin, velmax)
-    #ax2.set_ylim(0., 4.)
+    #ax2.set_ylim(0.7, 2.6)
 
     #ax.axvline(-200, ls=':', color='k', lw=0.5)
     #ax.axvline(200, ls=':', color='k', lw=0.5)
