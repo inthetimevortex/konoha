@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 '''
-Some useful constants
+Some useful constants (all in cgs)
 '''
 # physical constants
 c     = 2.99792458e10		# cm s-1, speed of light
@@ -36,3 +36,4 @@ Rjup   = 7.140e9			# cm, Jupiter radius
 
 # else
 pi    = 3.141592653589793	# pi
+Jyear = 365.25              # Julian year, in days
