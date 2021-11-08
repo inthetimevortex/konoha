@@ -27,7 +27,7 @@ from .get_data import get_halpha, get_iue, get_lines, get_sed, plot_lines, gen_p
 from .radial_velocity import delta_v, fwhm2sigma, gauss, Ha_delta_v
 from .sed_tools import jy2cgs, color_corr, vosa2catvalues
 from .utils import gentkdates, kde_scipy, integral, griddataBA, griddataBA_new, griddataBAtlas, bin_data, find_nearest, find_neighbours, geneva_interp_fast, poly_interp, Sliding_Outlier_Removal
-from .xdr_reader import xdr_reader, xdr_maker
+from .xdr_reader import xdr_reader, xdr_maker, xdr_reader_vel
 from .constants import *
 from .linesDict import line_names
 from .dynamic import dynamic_spectra

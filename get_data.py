@@ -542,7 +542,7 @@ def get_halpha():
             vel, flux = spt.lineProf(lbd, flux_norm, lbc=lbd0)
             barycorr = sc.radial_velocity_correction(kind='barycentric', obstime=Time(MJD[n], format='mjd'), location=obs_loc)
             barycorr = barycorr.value/1000.
-            print(barycorr)
+            #print(barycorr)
             vel_all.append(vel)
             corr_all.append(barycorr)
             flux_all.append(flux)
@@ -700,7 +700,7 @@ def get_halpha():
             #cut = asas(vel, flux, line)
             #cut_all.append(cut)
             if MJD[n] not in [53012.15712866, 53012.17133498]:
-                #print(MJD[n])
+                print(fname)
                 vel_all.append(vel)
                 #corr_all.append(corr)
                 flux_all.append(flux)
