@@ -167,11 +167,13 @@ def xdr_maker(fname, Rd, nr, rgrid, nmu, mugrid, nphi, phigrid, xrho):
     for i in range(0, nphi+1):
         p.pack_double(phigrid[i])
     z = np.zeros([nr, nmu])
-    for k in range(0, nphi):
+    #for i in range(0, nr):
+    for i in range(0, nphi):
     #const_rho[i, 20:30, :] = 2.14e11
         for j in range(0, nmu):
             #z[i, j] = mutoz(mugrid[i, j], rgrid[i])
-            for i in range(0, nr):
+            for k in range(0, nr):
+            #for k in range(0, nphi):
                 #if j ==0 or j == nmu-1:
                 #    rhogrid[i, j, k] = 0.0
                 #else:
