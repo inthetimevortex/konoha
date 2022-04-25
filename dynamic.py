@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
-'Dynamic Spectra maker!!'
+"Dynamic Spectra maker!!"
 #  dynamic.py
 #
 #  Copyright 2018 Amanda Rubio <amanda.rubio@usp.br>
@@ -48,78 +48,87 @@ from scipy import stats
 from icecream import ic
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
 
-sns.set_style("ticks", {"xtick.major.direction": 'in',
-              "ytick.major.direction": 'in'})
-
+sns.set_style("ticks", {"xtick.major.direction": "in", "ytick.major.direction": "in"})
 
 
 def normalize(v):
     norm = np.linalg.norm(v)
     if norm == 0:
-       return v
+        return v
     return v / norm
 
-#vel_all, flux_all, MJD_all, flag_all = get_halpha()
-def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, set_limits, phase_folded, log_scale, P, t0, velmin, velmax):
 
-    #resolution = 0.5 #days
+# vel_all, flux_all, MJD_all, flag_all = get_halpha()
+def dynamic_spectra(
+    line,
+    MJD_all,
+    vel_all,
+    flux_all,
+    resolution,
+    vmin,
+    vmax,
+    set_limits,
+    phase_folded,
+    log_scale,
+    P,
+    t0,
+    velmin,
+    velmax,
+):
 
-    flx_all=[]
+    # resolution = 0.5 #days
+
+    flx_all = []
     temp = np.arange(velmin, velmax, 1)
-
 
     MJD_to_sort = np.array(MJD_all)
     sort = MJD_to_sort.argsort()
     MJD_all = np.array(MJD_to_sort)[sort]
-    #flag_all = np.array(flag_all)[sort]
+    # flag_all = np.array(flag_all)[sort]
     vel_all = np.array(vel_all)[sort]
     flux_all = np.array(flux_all)[sort]
-    #print(len(MJD_all))
-    #print(vel_all)
-    #print(flux_all)
+    # print(len(MJD_all))
+    # print(vel_all)
+    # print(flux_all)
     for i in range(len(flux_all)):
         # interpolates specrum on 'temp' so they all have the same size :)
-        flx = griddata(vel_all[i], flux_all[i], temp, method='linear')
-        #plt.plot(vel_all[i], flux_all[i], linewidth=0.4, label=MJD_all[i])
+        flx = griddata(vel_all[i], flux_all[i], temp, method="linear")
+        # plt.plot(vel_all[i], flux_all[i], linewidth=0.4, label=MJD_all[i])
         flx_all.append(flx)
-    #print(flx_all)
+    # print(flx_all)
     flxx = np.array(flx_all)
-    keep = np.logical_not(np.isnan(flx_all))[:,0]
+    keep = np.logical_not(np.isnan(flx_all))[:, 0]
     flx_all = flxx[keep]
     vel_all = vel_all[keep]
     MJD_all = MJD_all[keep]
     MJD_to_sort = np.array(MJD_all)
     sort = MJD_to_sort.argsort()
-    #plt.legend()
-    #plt.show()
-    #print(len(MJD_all))
-    #im so good at names
+    # plt.legend()
+    # plt.show()
+    # print(len(MJD_all))
+    # im so good at names
     hello = np.mean(flx_all, axis=0)
 
     supes = []
 
-
     for j in range(len(flx_all)):
-        #superflux = np.tile(flx_all[j]-hello, (1, 1))
-        superflux = flx_all[j] -hello
-        #superflux = np.tile(flx_all[j], (1, 1))
-        #supes.append((superflux+ 1)**3 - 1)
+        # superflux = np.tile(flx_all[j]-hello, (1, 1))
+        superflux = flx_all[j] - hello
+        # superflux = np.tile(flx_all[j], (1, 1))
+        # supes.append((superflux+ 1)**3 - 1)
         supes.append(superflux)
 
-
-
-    #flux_a = np.tile(flx_all[0], (1, 1))
+    # flux_a = np.tile(flx_all[0], (1, 1))
     MJD_a = MJD_all[sort]
-    #print(len(MJD_a), len(MJD_all))
+    # print(len(MJD_a), len(MJD_all))
     MJD_a = MJD_a - min(MJD_a)
     MJD_keep = np.copy(MJD_a)
-    phase = (MJD_a-t0)/P %1
+    phase = (MJD_a - t0) / P % 1
     phase_keep = np.copy(phase)
-    #ic(phase_keep)
-
+    # ic(phase_keep)
 
     if not phase_folded:
-        MJD_a = MJD_a/resolution
+        MJD_a = MJD_a / resolution
 
         size_time = np.arange(MJD_a.min(), MJD_a.max(), 1)
         print(len(size_time))
@@ -136,35 +145,38 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
 
         for final_pos in pos_breakdown:
             pos = np.where(np.array(data_positions) == final_pos)[0]
-            flx_pos = np.sum(np.array(supes)[pos], axis=0)/len(pos)
+            flx_pos = np.sum(np.array(supes)[pos], axis=0) / len(pos)
 
             master[final_pos] = flx_pos
 
-        siz = max(MJD_a)/150
-        s_master=np.zeros([150, len(hello)])
-        #MJD_norm = MJD_a/max(MJD_a)
-        #ic(MJD_a)
-        #MJD_range = np.arange(MJD_keep[0], MJD_keep[-1], 96)
-        for cc in range(0,150):
-            MJD_range = [int(siz)*cc, int(siz)*cc+ 5.]
+        siz = max(MJD_a) / 150
+        s_master = np.zeros([150, len(hello)])
+        # MJD_norm = MJD_a/max(MJD_a)
+        # ic(MJD_a)
+        # MJD_range = np.arange(MJD_keep[0], MJD_keep[-1], 96)
+        for cc in range(0, 150):
+            MJD_range = [int(siz) * cc, int(siz) * cc + 5.0]
             ic(MJD_range)
             s_mask = np.ma.masked_inside(MJD_a, MJD_range[0], MJD_range[1]).mask
             ic(MJD_keep[s_mask])
-            s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0)/len(np.array(supes)[s_mask])
-            ic(len(s_flx_pos))
-            if len(s_flx_pos) != len(hello):
+            try:
+                s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0) / len(
+                    np.array(supes)[s_mask]
+                )
+                ic(len(s_flx_pos))
+            except RuntimeWarning:
+                # if len(s_flx_pos) != len(hello):
                 s_flx_pos = np.zeros(len(hello))
             s_master[cc] = s_flx_pos
-        master = np.copy(s_master)
+        master = np.copy(master)
         set_time_limits = [MJD_all.max(), MJD_all.min()]
-        set_time_label = 'RJD'
-
+        set_time_label = "RJD"
 
     else:
-        phase = phase/resolution
+        phase = phase / resolution
 
         size_time = np.arange(phase.min(), phase.max(), 1)
-        #size_time = np.concatenate([size_time])#, [phase.max()]])
+        # size_time = np.concatenate([size_time])#, [phase.max()]])
         size_time = size_time - int(phase.min())
         # print(len(size_time))
         # print(size_time)
@@ -173,149 +185,188 @@ def dynamic_spectra(line, MJD_all, vel_all, flux_all, resolution, vmin, vmax, se
         data_positions = []
 
         for k in range(len(phase)):
-            data_pos = int(phase[k])- int(phase.min())
+            data_pos = int(phase[k]) - int(phase.min())
             data_positions.append(data_pos)
 
         pos_breakdown = list(set(data_positions))
         for final_pos in pos_breakdown:
             pos = np.where(np.array(data_positions) == final_pos)[0]
-            flx_pos = np.sum(np.array(supes)[pos], axis=0)/len(pos)
+            flx_pos = np.sum(np.array(supes)[pos], axis=0) / len(pos)
 
             master[final_pos] = flx_pos
 
-        s_master=np.zeros([100, len(hello)])
-        for cc in range(0,100):
-            phase_range = [0.01*cc, 0.01*cc+ 0.05]
-            #ic(phase_range)
-            s_mask = np.ma.masked_inside(phase_keep, phase_range[0], phase_range[1]).mask
-            #ic(phase_keep[s_mask])
-            s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0)/len(np.array(supes)[s_mask])
+        s_master = np.zeros([100, len(hello)])
+        for cc in range(0, 100):
+            phase_range = [0.01 * cc, 0.01 * cc + 0.05]
+            # ic(phase_range)
+            s_mask = np.ma.masked_inside(
+                phase_keep, phase_range[0], phase_range[1]
+            ).mask
+            # ic(phase_keep[s_mask])
+            s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0) / len(
+                np.array(supes)[s_mask]
+            )
             if len(s_flx_pos) != len(hello):
                 s_flx_pos = np.zeros(len(hello))
             s_master[cc] = s_flx_pos
 
-        #print(len(master))
+        # print(len(master))
         # 2 phases
-        master = np.tile(s_master, (2,1))
+        master = np.tile(s_master, (2, 1))
 
         set_time_limits = [2, 0]
-        set_time_label = 'Phase (P = {:.2f})'.format(P)
+        set_time_label = "Phase (P = {:.2f})".format(P)
 
-
-    #print(np.log10(master))
+    # print(np.log10(master))
     if log_scale:
         masked_array = np.ma.masked_where(master == 0, np.log10(master))
     else:
         masked_array = np.ma.masked_where(master == 0, master)
-    #print(masked_array)
-    #my_cmap = copy.copy(mpl.cm.get_cmap("viridis"))
+    # print(masked_array)
+    # my_cmap = copy.copy(mpl.cm.get_cmap("viridis"))
     my_cmap = copy.copy(sns.dark_palette("#A0e5f7", as_cmap=True))
-    my_cmap.set_bad(color='white')
-
-
+    my_cmap.set_bad(color="white")
 
     fig = plt.figure(1, figsize=(4, 8))
-    gs1 = gridspec.GridSpec(4, 1, height_ratios=[0.05,0.15,1,0.2])
-    gs1.update(hspace=0.00, wspace=0.025)#, top=0.9)
+    gs1 = gridspec.GridSpec(4, 1, height_ratios=[0.05, 0.15, 1, 0.2])
+    gs1.update(hspace=0.00, wspace=0.025)  # , top=0.9)
 
-
-    #fig.subplots_adjust(right=0.8)
-
-
+    # fig.subplots_adjust(right=0.8)
 
     ax = plt.subplot(gs1[2, 0])
-    #cbax = fig.add_axes([.85, 0.25, 0.03, 0.5])
+    # cbax = fig.add_axes([.85, 0.25, 0.03, 0.5])
     if set_limits:
-        img1 = ax.imshow(masked_array, cmap = my_cmap,interpolation='nearest', extent = [velmin, velmax, set_time_limits[0], set_time_limits[1]],aspect='auto' , vmin=vmin, vmax=vmax)
+        img1 = ax.imshow(
+            masked_array,
+            cmap=my_cmap,
+            interpolation="nearest",
+            extent=[velmin, velmax, set_time_limits[0], set_time_limits[1]],
+            aspect="auto",
+            vmin=vmin,
+            vmax=vmax,
+        )
     else:
-        img1 = ax.imshow(masked_array, cmap = my_cmap,interpolation='nearest', extent = [velmin, velmax, set_time_limits[0], set_time_limits[1]],aspect='auto')
+        img1 = ax.imshow(
+            masked_array,
+            cmap=my_cmap,
+            interpolation="nearest",
+            extent=[velmin, velmax, set_time_limits[0], set_time_limits[1]],
+            aspect="auto",
+        )
 
     ax_divider = make_axes_locatable(ax)
     # add an axes above the main axes.
     cbax = ax_divider.append_axes("top", size="5%", pad="5%")
-    #cb = colorbar(im2, cax=cax2, orientation="horizontal")
-    cb = Colorbar(ax = cbax, mappable = img1, orientation = 'horizontal', ticklocation = 'top')
-    cb.set_label('Relative flux', fontsize=11)
-    #cb.set_clim(-0.1, 0.1)
+    # cb = colorbar(im2, cax=cax2, orientation="horizontal")
+    cb = Colorbar(ax=cbax, mappable=img1, orientation="horizontal", ticklocation="top")
+    cb.set_label("Relative flux", fontsize=11)
+    # cb.set_clim(-0.1, 0.1)
 
     plt.setp(ax.get_xticklabels(), visible=False)
     ax.set_ylabel(set_time_label)
-    #ax.set_title(line)
-    #t = np.linspace(0., 2., 100)
-    #t = np.linspace(MJD_all.min(), MJD_all.max(), 1000)
+    # ax.set_title(line)
+    # t = np.linspace(0., 2., 100)
+    # t = np.linspace(MJD_all.min(), MJD_all.max(), 1000)
     if not phase_folded:
         t = np.linspace(t0, MJD_all.max(), 1000)
-        sine = np.sin(2*np.pi/P*t)
-        ax.set_ylim(MJD_all.max(), MJD_all.min())
+        sine = np.sin(2 * np.pi / P * t)
+        ax.set_ylim(MJD_all.max(), 1600)
 
-        ax.annotate('', xy=(velmax, 2512), xytext=(velmax+90, 2512),
-                arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc='r', ec='r'))
-        ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 2512),xycoords='data',
-                xytext=(5, 5), textcoords='offset points',fontsize=8)
-        ax.annotate('', xy=(velmax, 2814), xytext=(velmax+90, 2814),
-                arrowprops=dict(arrowstyle="-|>",alpha=0.5, fc='b', ec='b'))
-        ax.annotate(r'$V/R_{MIN}$', xy=(velmax, 2814), xycoords='data',
-                xytext=(5, 5), textcoords='offset points',fontsize=8)
+        ax.annotate(
+            "",
+            xy=(velmax, 2512),
+            xytext=(velmax + 90, 2512),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
+        )
+        ax.annotate(
+            r"$V/R_{MAX}$",
+            xy=(velmax, 2512),
+            xycoords="data",
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=8,
+        )
+        ax.annotate(
+            "",
+            xy=(velmax, 2814),
+            xytext=(velmax + 90, 2814),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
+        )
+        ax.annotate(
+            r"$V/R_{MIN}$",
+            xy=(velmax, 2814),
+            xycoords="data",
+            xytext=(5, 5),
+            textcoords="offset points",
+            fontsize=8,
+        )
 
-        ax.annotate('', xy=(velmax, 3138), xytext=(velmax+90, 3138),
-                arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc='r', ec='r'))
-        #ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 3138),xycoords='data',
+        ax.annotate(
+            "",
+            xy=(velmax, 3138),
+            xytext=(velmax + 90, 3138),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
+        )
+        # ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 3138),xycoords='data',
         #        xytext=(5, 5), textcoords='offset points',fontsize=8)
-        ax.annotate('', xy=(velmax, 3287), xytext=(velmax+90, 3287),
-                arrowprops=dict(arrowstyle="-|>",alpha=0.5, fc='b', ec='b'))
-        #ax.annotate(r'$V/R_{MIN}$', xy=(velmax, 3287), xycoords='data',
+        ax.annotate(
+            "",
+            xy=(velmax, 3287),
+            xytext=(velmax + 90, 3287),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
+        )
+        # ax.annotate(r'$V/R_{MIN}$', xy=(velmax, 3287), xycoords='data',
         #        xytext=(5, 5), textcoords='offset points',fontsize=8)
 
-        ax.annotate('', xy=(velmax, 3381), xytext=(velmax+90, 3381),
-                arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc='r', ec='r'))
-        #ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 3381),xycoords='data',
+        ax.annotate(
+            "",
+            xy=(velmax, 3381),
+            xytext=(velmax + 90, 3381),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
+        )
+        # ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 3381),xycoords='data',
         #        xytext=(5, 5), textcoords='offset points',fontsize=8)
 
     else:
-        t = np.linspace(0., 2., 100)
-        sine = np.sin(np.linspace(np.pi/2, 4.5*np.pi, 100))
+        t = np.linspace(0.0, 2.0, 100)
+        sine = np.sin(np.linspace(np.pi / 2, 4.5 * np.pi, 100))
 
-    amp=55.9
-    ax.plot(amp*sine, t, color='xkcd:darkish red', lw=0.6)
-
-
-
+    amp = 55.9
+    # ax.plot(amp * sine, t, color="xkcd:darkish red", lw=0.6)
 
     ax2 = plt.subplot(gs1[3, 0])
-    ax2.set_ylabel('Norm. flux', fontsize=9)
-    ax2.set_xlabel('$\mathrm{Velocity\,[km\,s^{-1}]}$')
+    ax2.set_ylabel("Norm. flux", fontsize=9)
+    ax2.set_xlabel(r"$\mathrm{Velocity\,[km\,s^{-1}]}$")
     nbins = 4
-    ax.yaxis.set_major_locator(MaxNLocator(nbins=8, prune='upper'))
-    ax2.yaxis.set_major_locator(MaxNLocator(nbins=nbins, prune='upper'))
+    ax.yaxis.set_major_locator(MaxNLocator(nbins=8, prune="upper"))
+    ax2.yaxis.set_major_locator(MaxNLocator(nbins=nbins, prune="upper"))
 
-
-    #new_color = plt.cm.jet(phase_keep)
+    # new_color = plt.cm.jet(phase_keep)
 
     for flxs in flx_all:
-        ax2.plot(temp, flxs, color='gray', alpha=0.3, lw=0.5)
+        ax2.plot(temp, flxs, color="gray", alpha=0.3, lw=0.5)
 
-    ax2.plot(temp, hello, color = my_cmap(.25), lw=2)
+    ax2.plot(temp, hello, color=my_cmap(0.25), lw=2)
     ax2.set_xlim(velmin, velmax)
 
     # ax.axvline(-200, ls=':', color='k', lw=0.5)
     # ax.axvline(200, ls=':', color='k', lw=0.5)
     # ax2.axvline(-200, ls=':', color='k', lw=0.5)
     # ax2.axvline(200, ls=':', color='k', lw=0.5)
-    #ax.yaxis.grid(False) # Hide the horizontal gridlines
-    #ax2.yaxis.grid(False) # Hide the horizontal gridlines
-    #ax.xaxis.grid(True) # Show the vertical gridlines
-    #ax2.xaxis.grid(True) # Show the vertical gridlines
+    # ax.yaxis.grid(False) # Hide the horizontal gridlines
+    # ax2.yaxis.grid(False) # Hide the horizontal gridlines
+    # ax.xaxis.grid(True) # Show the vertical gridlines
+    # ax2.xaxis.grid(True) # Show the vertical gridlines
 
-    plt.savefig(line+"_dynamic_s.pdf", dpi=100, bbox_inches='tight')
+    plt.savefig(line + "_dynamic_21-04-22.pdf", dpi=100, bbox_inches="tight")
 
-
-    #temp2 = np.arange(-850, +850, 0.2)
+    # temp2 = np.arange(-850, +850, 0.2)
     ##
-    #plt.figure(2, figsize=(4,8))
-    #ax1 = plt.subplot(111)
+    # plt.figure(2, figsize=(4,8))
+    # ax1 = plt.subplot(111)
     #
-    #for k in range(len(master)):
+    # for k in range(len(master)):
     #    #for l in range(len(MJD_a)):
     #    plt.scatter(temp, master[k]+MJD_all[k], c=master[k], cmap=my_cmap, s=0.5)
-    #ax1.set_ylim(ax1.get_ylim()[::-1])
-    #plt.savefig(line+"_dynamic_profiles.png", dpi=100, bbox_inches='tight')
+    # ax1.set_ylim(ax1.get_ylim()[::-1])
+    # plt.savefig(line+"_dynamic_profiles.png", dpi=100, bbox_inches='tight')
