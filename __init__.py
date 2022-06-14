@@ -31,6 +31,7 @@ from .get_data import (
     plot_lines,
     gen_plot_lines,
 )
+from .find_bisectors import find_bisectors
 from .radial_velocity import delta_v, fwhm2sigma, gauss, Ha_delta_v
 from .sed_tools import jy2cgs, color_corr, vosa2catvalues
 from .utils import (
@@ -75,6 +76,7 @@ __all__ = (
     "get_iue",
     "get_lines",
     "get_sed",
+    "find_bisectors",
     "plot_lines",
     "delta_v",
     "Ha_delta_v",

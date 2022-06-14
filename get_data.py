@@ -32,7 +32,7 @@ from astropy.coordinates import SkyCoord, EarthLocation
 from collections import OrderedDict
 import pyhdust.spectools as spt
 from PyAstronomy import pyasl
-from konoha import linesDict
+from konoha import linesDict, constants
 import seaborn as sns
 import socket
 from konoha.utils import bin_data
@@ -43,8 +43,8 @@ sns.set_style("white", {"xtick.major.direction": "in", "ytick.major.direction": 
 PCname = socket.gethostname()
 if PCname == "Pakkun":
     direc = "/Users/amanda/Drive/"
-elif PCname == "bisuke.local":
-    direc = "/Users/student/GoogleDrive/"
+elif PCname == "BISUKE.local":
+    direc = "/Volumes/GoogleDrive/Meu Drive/"
 else:
     direc = "/home/amanda/"
 
@@ -520,6 +520,8 @@ def get_halpha():
             hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
+            hdr_list.close()
+
             # f = open('{0}_{1}.txt'.format(flag, n), 'wb')
             # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             # read MJD
@@ -568,6 +570,8 @@ def get_halpha():
             hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
+            hdr_list.close()
+
             # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             # read MJD
             MJD[n] = fits_header["MID-HJD"]  # HJD at mid-exposure
@@ -606,6 +610,8 @@ def get_halpha():
             hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
+            hdr_list.close()
+
             # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             # read MJD
             MJD[n] = fits_header["JD"]  # JD
@@ -641,6 +647,8 @@ def get_halpha():
             hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
+            hdr_list.close()
+
             # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             # read MJD
             MJD[n] = fits_header["MJD"]  # JD
@@ -691,6 +699,8 @@ def get_halpha():
             arr1 = scidata[0][1]
             arr2 = scidata[0][2]
             fits_header = hdulist[0].header
+            hdulist.close()
+
             # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             MJD[n] = fits_header["MJD-OBS"]
             vel, flux = spt.lineProf(wave, arr1, lbc=lbd0 * 10)
@@ -698,7 +708,7 @@ def get_halpha():
             # cut = asas(vel, flux, line)
             # cut_all.append(cut)
             if MJD[n] not in [53012.15712866, 53012.17133498]:
-                print(fname)
+                # print(fname)
                 vel_all.append(vel)
                 # corr_all.append(corr)
                 flux_all.append(flux)
@@ -721,6 +731,7 @@ def get_halpha():
             hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
+            hdr_list.close()
             # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             # read MJD
             MJD[n] = fits_header["MJD"]
@@ -764,6 +775,8 @@ def get_halpha():
             hdr_list = fits.open(fname)
             fits_data = hdr_list[0].data
             fits_header = hdr_list[0].header
+            hdr_list.close()
+
             # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
             # read MJD
             MJD[n] = fits_header["MJD-OBS"]
@@ -814,6 +827,7 @@ def get_halpha():
             WaveThAr = hdulist[7]
             SpecXcor = hdulist[8]
             RVBlockFit = hdulist[9]
+            # hdulist.close()
 
             wl_list.append(WaveSpec)
             flx_list.append(SpecFlat)
@@ -832,6 +846,7 @@ def get_halpha():
             vel, flux = spt.lineProf(
                 wl_list[i].data[order], flx_list[i].data[order], lbc=lbd0
             )
+            # hdulist.close()
             # vel = vel + corr
             # vel_all.append(vel)
             # corr_all.append(corr)
@@ -852,9 +867,9 @@ def get_halpha():
             # heliocentric correction is easier, but less precise at a level of like 10 m/s
             # heliocorr = sc.radial_velocity_correction(kind='heliocentric',obstime=Time(BJD_list[i], format='jd'), location=obs_loc)
             # helcorr_list.append(heliocorr.value* au.value / (60*60*24)/ 1000.0)
-            vl = vel + barycorr + vel * barycorr / (c.value / 1000.0)
+            vl = vel + barycorr + vel * barycorr / (constants.c / 1000.0)
             vel_all.append(vl)
-
+        hdulist.close()
     return MJD_all, vel_all, flux_all, flag_all
 
 

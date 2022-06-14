@@ -358,7 +358,7 @@ def dynamic_spectra(
     # ax.xaxis.grid(True) # Show the vertical gridlines
     # ax2.xaxis.grid(True) # Show the vertical gridlines
 
-    plt.savefig(line + "_dynamic_21-04-22.pdf", dpi=100, bbox_inches="tight")
+    plt.savefig(line + "_dynamic_14-06-22.pdf", dpi=100, bbox_inches="tight")
 
     # temp2 = np.arange(-850, +850, 0.2)
     ##
