@@ -810,7 +810,13 @@ def get_halpha():
 
             hdulist = fits.open(fname)
             headers = hdulist[0].header
-            BJD_mid_exp = headers["BJD"]
+            try:
+                # print(fname, headers["BJD"])
+                BJD_mid_exp = headers["BJD"]
+            except:
+                BJD_mid_exp = headers["MJD-OBS"]
+                print("HEY")
+                print(hdulist[0].data)
 
             DAY_OBS = headers["DATE-OBS"]
             SITE = headers["SITE"]

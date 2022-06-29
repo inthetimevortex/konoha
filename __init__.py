@@ -31,6 +31,7 @@ from .get_data import (
     plot_lines,
     gen_plot_lines,
 )
+from .hpd import hpd_grid
 from .find_bisectors import find_bisectors
 from .radial_velocity import delta_v, fwhm2sigma, gauss, Ha_delta_v
 from .sed_tools import jy2cgs, color_corr, vosa2catvalues
@@ -110,4 +111,5 @@ __all__ = (
     "hex_to_rgb",
     "rgb_to_dec",
     "get_continuous_cmap",
+    "hpd_grid"
 )
