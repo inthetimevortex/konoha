@@ -657,7 +657,7 @@ def geneva_interp_fast(Mstar, oblat, t, Zstr="014", silent=True):
     """
     # read grid
     # dir0 = '{0}/refs/geneva_models/'.format(_hdtpath())
-    dir0 = "/home/amanda/Dropbox/Amanda/GRID/BEMCEE/defs/geneve_models/"
+    dir0 = "/Users/arubio/Google Drive/Meu Drive/Dropbox/Amanda/GRID/BEMCEE/defs/geneve_models/"
     if Mstar <= 20.0:
         fname = "geneva_interp_Z{:}.npz".format(Zstr)
     else:

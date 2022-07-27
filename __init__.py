@@ -25,6 +25,8 @@
 from __future__ import division, print_function, absolute_import
 from .get_data import (
     get_halpha,
+    get_halpha_aara,
+    read_iue,
     get_iue,
     get_lines,
     get_sed,
@@ -111,5 +113,7 @@ __all__ = (
     "hex_to_rgb",
     "rgb_to_dec",
     "get_continuous_cmap",
-    "hpd_grid"
+    "hpd_grid",
+    "read_iue",
+    "get_halpha_aara",
 )

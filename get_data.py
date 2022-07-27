@@ -36,6 +36,8 @@ from konoha import linesDict, constants
 import seaborn as sns
 import socket
 from konoha.utils import bin_data
+import os
+
 
 sns.set_style("white", {"xtick.major.direction": "in", "ytick.major.direction": "in"})
 
@@ -49,7 +51,96 @@ else:
     direc = "/home/amanda/"
 
 
-def get_iue():
+# ==============================================================================
+def read_iue(folder_data, stars):
+
+    table = folder_data + stars + "/" + "list_iue.txt"
+
+    # os.chdir(flag.folder_data + str(flag.stars) + '/')
+    if os.path.isfile(table) is False:
+        os.system(
+            "ls "
+            + folder_data
+            + stars
+            + "/*.FITS | xargs -n1 basename >"
+            + folder_data
+            + stars
+            + "/"
+            + "list_iue.txt"
+        )
+
+    iue_list = np.genfromtxt(table, comments="#", dtype="str")
+    # print(iue_list.size)
+    if iue_list.size == 1:
+        # print(file_name)
+        file_name = str(iue_list)
+    else:
+        file_name = np.copy(iue_list)
+
+    fluxes, waves, errors = [], [], []
+    print(file_name)
+
+    if file_name[0][-3:] == "csv":
+        file_iue = str(folder_data) + stars + "/" + str(file_name)
+        wave, flux, sigma = np.loadtxt(str(file_iue), delimiter=",").T
+        fluxes = np.concatenate((fluxes, flux * 1e4), axis=0)
+        waves = np.concatenate((waves, wave * 1e-4), axis=0)
+        errors = np.concatenate((errors, sigma * 1e4), axis=0)
+
+    else:
+        # Combines the observations from all files in the folder, taking the good quality ones
+        for fname in file_name:
+            file_iue = str(folder_data) + stars + "/" + str(fname)
+            # print(file_iue)
+            hdulist = fits.open(file_iue)
+            tbdata = hdulist[1].data
+            wave = tbdata.field("WAVELENGTH") * 1e-4  # mum
+            flux = tbdata.field("FLUX") * 1e4  # erg/cm2/s/A -> erg/cm2/s/mum
+            sigma = tbdata.field("SIGMA") * 1e4  # erg/cm2/s/A -> erg/cm2/s/mum
+
+            # Filter of bad data: '0' is good data
+            qualy = tbdata.field("QUALITY")
+            idx = np.where((qualy == 0))
+            wave = wave[idx]
+            sigma = sigma[idx]
+            flux = flux[idx]
+
+            idx = np.where((flux > 0.0))
+            wave = wave[idx]
+            sigma = sigma[idx]
+            flux = flux[idx]
+
+            fluxes = np.concatenate((fluxes, flux), axis=0)
+            waves = np.concatenate((waves, wave), axis=0)
+            errors = np.concatenate((errors, sigma), axis=0)
+
+    wave_lim_min_iue = min(waves)
+    wave_lim_max_iue = 0.290
+    indx = np.where(((waves >= wave_lim_min_iue) & (waves <= wave_lim_max_iue)))
+    waves, fluxes, errors = waves[indx], fluxes[indx], errors[indx]
+
+    # sort the combined observations in all files
+    new_wave, new_flux, new_sigma = zip(*sorted(zip(waves, fluxes, errors)))
+
+    nbins = 200
+    xbin, ybin, dybin = bin_data(new_wave, new_flux, nbins, exclude_empty=True)
+
+    # just to make sure that everything is in order
+    ordem = xbin.argsort()
+    wave = xbin[ordem]
+    flux = ybin[ordem]
+    sigma = dybin[ordem]
+
+    for i in range(len(sigma)):
+        if sigma[i] < flux[i] * 0.01:
+            sigma[i] = flux[i] * 0.01
+
+    # ic(sigma / flux)
+
+    return wave, flux, sigma
+
+
+def get_iue(files, plot=False, each_fits=False):
     """
     Get IUE data, at input wavelength grid
 
@@ -58,18 +149,36 @@ def get_iue():
 
     if stddev=True, errors are computed from stddev around power-law fit
     """
-    flist = glob("/home/amanda/Dropbox/Amanda/Data/IUE-INES/*")
+    # flist = glob("/home/amanda/Dropbox/Amanda/Data/IUE-INES/*")
+    flist = glob(files)
     lbd_iue = np.array([])
     flux_iue = np.array([])
     dflux_iue = np.array([])
     for i in range(len(flist)):
         fname = flist[i]
-        hdr_list = fits.open(fname)
-        fits_data = hdr_list[1].data
-        fits_header = hdr_list[0].header
-        lbd_iue = np.hstack([lbd_iue, 1e-4 * fits_data["WAVELENGTH"]])
-        flux_iue = np.hstack([flux_iue, 1e4 * fits_data["FLUX"]])
-        dflux_iue = np.hstack([dflux_iue, 1e4 * fits_data["SIGMA"]])
+        with fits.open(fname) as hdr_list:
+            # hdr_list = fits.open(fname)
+            fits_data = hdr_list[1].data
+            fits_header = hdr_list[0].header
+            lbd_iue = np.hstack([lbd_iue, 1e-4 * fits_data["WAVELENGTH"]])
+            flux_iue = np.hstack([flux_iue, 1e4 * fits_data["FLUX"]])
+            dflux_iue = np.hstack([dflux_iue, 1e4 * fits_data["SIGMA"]])
+            if plot:
+                plt.errorbar(
+                    fits_data["WAVELENGTH"],
+                    fits_data["FLUX"],
+                    yerr=fits_data["SIGMA"],
+                    marker="o",
+                    markersize=2,
+                    label=fname,
+                )
+                if each_fits:
+                    plt.legend()
+                    plt.ylim(0.0, 3e-9)
+                    plt.xlim(1000, 3000)
+                    plt.savefig(fname + ".png", dpi=100)
+                    plt.close()
+
     ordem = lbd_iue.argsort()
     lbd_iue = lbd_iue[ordem]
     flux_iue = flux_iue[ordem]
@@ -81,6 +190,11 @@ def get_iue():
 
     nbins = 200
     xbin, ybin, dybin = bin_data(lbd_iue, flux_iue, nbins, exclude_empty=True)
+
+    if not each_fits:
+        # plt.legend()
+        plt.savefig("IUE_data.png", dpi=100)
+        plt.close()
 
     return lbd_iue, flux_iue, dflux_iue
 
@@ -797,74 +911,107 @@ def get_halpha():
     barycorr_list = []
     flag = "NRES"
     if flag in USE:
-        lines = glob(direc + "Dropbox/Amanda/Data/NRES/*fits*")
+        lines = glob(direc + "Dropbox/Amanda/Data/NRES/*fits*npz")
         MJD = np.zeros([len(lines)])
         JD = np.zeros([len(lines)])
 
-        order = linesDict.line_names["Ha"][0]
-        wl_list = []
-        flx_list = []
-        BJD_list = []
-        for n in range(len(lines)):
-            fname = lines[n]
+        # order = linesDict.line_names["Ha"][0]
+        # wl_list = []
+        # flx_list = []
+        # BJD_list = []
+        # for n in range(len(lines)):
+        #     fname = lines[n]
+        #
+        #     hdulist = fits.open(fname)
+        #     headers = hdulist[0].header
+        #     try:
+        #         # print(fname, headers["BJD"])
+        #         BJD_mid_exp = headers["BJD"]
+        #     except:
+        #         BJD_mid_exp = headers["MJD-OBS"]
+        #         print("HEY")
+        #         print(hdulist[0].data)
+        #
+        #     DAY_OBS = headers["DATE-OBS"]
+        #     SITE = headers["SITE"]
+        #     LONG1 = headers["LONG1"]
+        #     LAT1 = headers["LAT1"]
+        #     HT1 = headers["HT1"]
+        #
+        #     SpecRaw = hdulist[1]
+        #     SpecFlat = hdulist[2]
+        #     SpecBlaze = hdulist[3]
+        #     ThArRaw = hdulist[4]
+        #     ThArFlat = hdulist[5]
+        #     WaveSpec = hdulist[6]
+        #     WaveThAr = hdulist[7]
+        #     SpecXcor = hdulist[8]
+        #     RVBlockFit = hdulist[9]
+        #     # hdulist.close()
+        #
+        #     wl_list.append(WaveSpec)
+        #     flx_list.append(SpecFlat)
+        #     # flx_list.append(SpecBlaze)
+        #     BJD_list.append(BJD_mid_exp)
+        #     # MJD_all.append(MJD[n])
+        #     obs_loc = EarthLocation.from_geodetic(
+        #         lat=LAT1 * u.deg, lon=LONG1 * u.deg, height=HT1 * u.m
+        #     )
+        #     sc = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
+        #
+        # wl_list = np.array(wl_list)[np.argsort(BJD_list)]
+        # flx_list = np.array(flx_list)[np.argsort(BJD_list)]
+        # BJD_list = np.array(BJD_list)[np.argsort(BJD_list)]
+        # for i, x in enumerate(wl_list):
+        #     vel, flux = spt.lineProf(
+        #         wl_list[i].data[order], flx_list[i].data[order], lbc=lbd0
+        #     )
+        #     # hdulist.close()
+        #     # vel = vel + corr
+        #     # vel_all.append(vel)
+        #     # corr_all.append(corr)
+        #     flux_all.append(flux)
+        #     t = Time(BJD_list[i], format="jd", scale="utc")
+        #
+        #     MJD_all.append(t.mjd)
+        #     flag_all.append(flag)
+        #     # barycentric correction is more precise, but might be more difficult to apply
+        #     barycorr = sc.radial_velocity_correction(
+        #         kind="barycentric",
+        #         obstime=Time(BJD_list[i], format="jd"),
+        #         location=obs_loc,
+        #     )
+        #     barycorr = barycorr.value / 1000.0
+        #     barycorr_list.append(barycorr)
+        #
+        #     # heliocentric correction is easier, but less precise at a level of like 10 m/s
+        #     # heliocorr = sc.radial_velocity_correction(kind='heliocentric',obstime=Time(BJD_list[i], format='jd'), location=obs_loc)
+        #     # helcorr_list.append(heliocorr.value* au.value / (60*60*24)/ 1000.0)
+        #     vl = vel + barycorr + vel * barycorr / (constants.c / 1000.0)
+        #     vel_all.append(vl)
 
-            hdulist = fits.open(fname)
-            headers = hdulist[0].header
+        for fname in lines:
+            data = np.load(fname)
+            # plt.plot(data["wl"], data["fx"])
+            # plt.title(fname)
+            # plt.show()
             try:
-                # print(fname, headers["BJD"])
-                BJD_mid_exp = headers["BJD"]
-            except:
-                BJD_mid_exp = headers["MJD-OBS"]
-                print("HEY")
-                print(hdulist[0].data)
-
-            DAY_OBS = headers["DATE-OBS"]
-            SITE = headers["SITE"]
-            LONG1 = headers["LONG1"]
-            LAT1 = headers["LAT1"]
-            HT1 = headers["HT1"]
-
-            SpecRaw = hdulist[1]
-            SpecFlat = hdulist[2]
-            SpecBlaze = hdulist[3]
-            ThArRaw = hdulist[4]
-            ThArFlat = hdulist[5]
-            WaveSpec = hdulist[6]
-            WaveThAr = hdulist[7]
-            SpecXcor = hdulist[8]
-            RVBlockFit = hdulist[9]
-            # hdulist.close()
-
-            wl_list.append(WaveSpec)
-            flx_list.append(SpecFlat)
-            # flx_list.append(SpecBlaze)
-            BJD_list.append(BJD_mid_exp)
-            # MJD_all.append(MJD[n])
-            obs_loc = EarthLocation.from_geodetic(
-                lat=LAT1 * u.deg, lon=LONG1 * u.deg, height=HT1 * u.m
-            )
-            sc = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
-
-        wl_list = np.array(wl_list)[np.argsort(BJD_list)]
-        flx_list = np.array(flx_list)[np.argsort(BJD_list)]
-        BJD_list = np.array(BJD_list)[np.argsort(BJD_list)]
-        for i, x in enumerate(wl_list):
-            vel, flux = spt.lineProf(
-                wl_list[i].data[order], flx_list[i].data[order], lbc=lbd0
-            )
+                vel, flux = spt.lineProf(data["wl"], data["fx"], lbc=lbd0)
+            except RuntimeWarning:
+                continue
             # hdulist.close()
             # vel = vel + corr
             # vel_all.append(vel)
             # corr_all.append(corr)
             flux_all.append(flux)
-            t = Time(BJD_list[i], format="jd", scale="utc")
+            t = Time(data["BJD"], format="jd", scale="utc")
 
             MJD_all.append(t.mjd)
             flag_all.append(flag)
             # barycentric correction is more precise, but might be more difficult to apply
             barycorr = sc.radial_velocity_correction(
                 kind="barycentric",
-                obstime=Time(BJD_list[i], format="jd"),
+                obstime=Time(data["BJD"], format="jd"),
                 location=obs_loc,
             )
             barycorr = barycorr.value / 1000.0
@@ -875,7 +1022,7 @@ def get_halpha():
             # helcorr_list.append(heliocorr.value* au.value / (60*60*24)/ 1000.0)
             vl = vel + barycorr + vel * barycorr / (constants.c / 1000.0)
             vel_all.append(vl)
-        hdulist.close()
+        # hdulist.close()
     return MJD_all, vel_all, flux_all, flag_all
 
 
@@ -1082,3 +1229,341 @@ def gen_plot_lines(line, MJD_all, vel_all, flux_all, flag_all):
     plt.savefig("{0}_profiles.png".format(line), dpi=200, bbox_inches="tight")
     # plt.show()
     return "Image {0}_profiles.png saved!".format(line)
+
+
+def get_halpha_aara():
+    flux_all = []
+    vel_all = []
+    MJD_all = []
+    flag_all = []
+    lbd0 = 6562.8
+    lines = glob(direc + "Dropbox/Amanda/Data_AARA/npzs/*npz")
+    for fname in lines:
+        data = np.load(fname)
+        lbd = data["wl"]
+        # print(lbd)
+        flx = data["fx"]
+        # print(flx)
+        MJD = data["MJD"]
+        flag = data["flag"]
+        if lbd0 * 1e-4 > np.max(lbd):
+            continue
+        try:
+            vel, flux = spt.lineProf(lbd, flx, lbc=lbd0)
+        except:
+            vel, flux = spt.lineProf(lbd, flx, lbc=lbd0 * 1e-4)
+        vel_all.append(vel)
+        flux_all.append(flux)
+        MJD_all.append(MJD)
+        flag_all.append(flag)
+
+    # corr_all = []
+    # ra = 262.9603813675
+    # dec = -49.8761450114
+    #
+    # line = "Ha"
+    #
+    # USE = [
+    #     "BeSS",
+    #     "BeSOS",
+    #     "ESO",
+    #     "GAVO",
+    # ]
+    # # USE = ['NRES']
+    #
+    # lbd0 = 656.28
+    #
+    # # # plot ESPaDOnS
+    # # flag = "ESPaDOnS"
+    # # if flag in USE:
+    # #     lines = glob(direc + "Dropbox/Amanda/Data/ESPaDOnS/new/*i.fits.gz")
+    # #     MJD = np.zeros([len(lines)])
+    # #     JD = np.zeros([len(lines)])
+    # #     ####
+    # #     # FROM THE HEADER
+    # #     ###COMMENT Correcting wavelength scale from Earth motion...
+    # #     ###COMMENT Coordinates of object : 5:39:38.94 & -34: 4:26.9
+    # #     ###COMMENT Time of observations : 2011 11 9 @ UT 13:34:33
+    # #     ###COMMENT  (hour angle = 0.775 hr, airmass = 1.742 )
+    # #     ###COMMENT Total exposure time : 25.0 s
+    # #     ###COMMENT Cosine latitude of observatory : 0.941
+    # #     ###COMMENT Heliocentric velocity of observer towards star : 9.114 km/s
+    # #
+    # #     for n in range(len(lines)):
+    # #         fname = lines[n]
+    # #         # read fits
+    # #         hdr_list = fits.open(fname)
+    # #         fits_data = hdr_list[0].data
+    # #         fits_header = hdr_list[0].header
+    # #         hdr_list.close()
+    # #
+    # #         # f = open('{0}_{1}.txt'.format(flag, n), 'wb')
+    # #         # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
+    # #         # read MJD
+    # #         MJD[n] = fits_header["MJDATE"]
+    # #
+    # #         lat = fits_header["LATITUDE"]
+    # #         lon = fits_header["LONGITUD"]
+    # #         ht = 4200  # m
+    # #         obs_loc = EarthLocation.from_geodetic(
+    # #             lat=lat * u.deg, lon=lon * u.deg, height=ht * u.m
+    # #         )
+    # #         sc = SkyCoord(ra=ra * u.deg, dec=dec * u.deg)
+    # #         lbd = fits_data[0, :]
+    # #         ordem = lbd.argsort()
+    # #         lbd = lbd[ordem]
+    # #         flux_norm = fits_data[1, ordem]
+    # #         vel, flux = spt.lineProf(lbd, flux_norm, lbc=lbd0)
+    # #         barycorr = sc.radial_velocity_correction(
+    # #             kind="barycentric", obstime=Time(MJD[n], format="mjd"), location=obs_loc
+    # #         )
+    # #         barycorr = barycorr.value / 1000.0
+    # #         # print(barycorr)
+    # #         vel_all.append(vel)
+    # #         corr_all.append(barycorr)
+    # #         flux_all.append(flux)
+    # #         MJD_all.append(MJD[n])
+    # #         flag_all.append(flag)
+    #
+    # ## plot BeSS
+    # flag = "BeSS"
+    # if flag in USE:
+    #     lines = glob(direc + "Dropbox/Amanda/Data_AARA/BeSS/*fits")
+    #     MJD = np.zeros([len(lines)])
+    #     JD = np.zeros([len(lines)])
+    #
+    #     # FROM HEADER
+    #     #           BSS_VHEL shows the applied correction in km/s. If BSS_VHEL=0,
+    #     # COMMENT   no correction has been applied. The required correction given
+    #     # COMMENT   in BSS_RQVH (in km/s) is an escape velocity (redshift). To apply
+    #     # COMMENT   it within Iraf, the keyword redshift must be set to -BSS_RQVH
+    #     # COMMENT   and isvelocity must be set to "yes" in the dopcor task.
+    #
+    #     for n in range(len(lines)):
+    #         fname = lines[n]
+    #         # read fits
+    #         hdr_list = fits.open(fname)
+    #         fits_data = hdr_list[0].data
+    #         fits_header = hdr_list[0].header
+    #         hdr_list.close()
+    #
+    #         # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
+    #         # read MJD
+    #         MJD[n] = fits_header["MID-HJD"]  # HJD at mid-exposure
+    #         t = Time(MJD[n], format="jd", scale="utc")
+    #         MJD[n] = t.mjd
+    #         # lat = fits_header['BSS_LAT']
+    #         # lon = fits_header['BSS_LONG']
+    #         # elev = fits_header['BSS_ELEV']
+    #         corr = -fits_header["BSS_RQVH"]
+    #         lbd = fits_header["CRVAL1"] + fits_header["CDELT1"] * np.arange(
+    #             len(fits_data)
+    #         )
+    #         vel, flux = spt.lineProf(lbd, fits_data, lbc=lbd0 * 10)
+    #         # if len(vel) < 200:
+    #         #     continue
+    #         vel = vel + corr
+    #         # cut = asas(vel, flux, line)
+    #         # cut_all.append(cut)
+    #         vel_all.append(vel)
+    #         # corr_all.append(corr)
+    #         flux_all.append(flux)
+    #         MJD_all.append(MJD[n])
+    #         flag_all.append(flag)
+    #
+    # # # plot MUSICOS
+    # # flag = "OPD - Musicos"
+    # # if flag in USE:
+    # #     lines = glob(
+    # #         direc + "Dropbox/Amanda/Data/MUSICOS/andre/spec_*/acol/*halpha.fits"
+    # #     )
+    # #     MJD = np.zeros([len(lines)])
+    # #     #######################################
+    # #     # Andre disse q estao corrigidos
+    # #     #######################################
+    # #     for n in range(len(lines)):
+    # #         fname = lines[n]
+    # #         # read fits
+    # #         hdr_list = fits.open(fname)
+    # #         fits_data = hdr_list[0].data
+    # #         fits_header = hdr_list[0].header
+    # #         hdr_list.close()
+    # #
+    # #         # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
+    # #         # read MJD
+    # #         MJD[n] = fits_header["JD"]  # JD
+    # #         t = Time(MJD[n], format="jd", scale="utc")
+    # #         MJD[n] = t.mjd
+    # #         # corr = fits_header['VHELIO']
+    # #         lbd = fits_header["CRVAL1"] + fits_header["CDELT1"] * np.arange(
+    # #             len(fits_data)
+    # #         )
+    # #         vel, flux = spt.lineProf(lbd, fits_data, lbc=lbd0 * 10)
+    # #         vel_all.append(vel)
+    # #         # cut = asas(vel, flux, line)
+    # #         # cut_all.append(cut)
+    # #         # corr_all.append(corr)
+    # #         flux_all.append(flux)
+    # #         MJD_all.append(MJD[n])
+    # #         flag_all.append(flag)
+    # #
+    # # ## plot Moser
+    # # flag = "OPD - Ecass"
+    # # if flag in USE:
+    # #     lines = glob(direc + "Dropbox/Amanda/Data/ecass_musicos/data/alpCol*")
+    # #     MJD = np.zeros([len(lines)])
+    # #
+    # #     ## NO INFO ON HEADER!
+    # #     # Latitude: 22° 32' 04" S	Longitude: 45° 34' 57" W
+    # #     lat = -22.53444
+    # #     lon = -45.5825
+    # #     alt = 1864.0
+    # #     for n in range(len(lines)):
+    # #         fname = lines[n]
+    # #         # read fits
+    # #         hdr_list = fits.open(fname)
+    # #         fits_data = hdr_list[0].data
+    # #         fits_header = hdr_list[0].header
+    # #         hdr_list.close()
+    # #
+    # #         # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
+    # #         # read MJD
+    # #         MJD[n] = fits_header["MJD"]  # JD
+    # #         # t = Time(MJD[n], format = 'jd', scale='utc')
+    # #         # MJD[n] = t.mjd
+    # #         t = Time(MJD[n], format="mjd", scale="utc")
+    # #         JD[n] = t.jd
+    # #         corr, hjd = pyasl.helcorr(lon, lat, alt, ra, dec, JD[n])
+    # #         # corr = 0.
+    # #         lbd = fits_header["CRVAL1"] + fits_header["CDELT1"] * np.arange(
+    # #             len(fits_data)
+    # #         )
+    # #         vel, flux = spt.lineProf(lbd, fits_data, lbc=lbd0 * 10)
+    # #         vel = vel + corr
+    # #         vel_all.append(vel)
+    # #         # cut = asas(vel, flux, line)
+    # #         # cut_all.append(cut)
+    # #         # corr_all.append(corr)
+    # #         flux_all.append(flux)
+    # #         MJD_all.append(MJD[n])
+    # #         flag_all.append(flag)
+    #
+    # # plot UVES
+    # flag = "ESO"
+    # if flag in USE:
+    #     lines = glob(direc + "Dropbox/Amanda/Data_AARA/ESO/*.fits")
+    #     MJD = np.zeros([len(lines)])
+    #     JD = np.zeros([len(lines)])
+    #
+    #     # lat = -29.257778
+    #     # lon = -70.736667
+    #
+    #     # FROM HEADER
+    #     ###################################################################################
+    #     # HIERARCH ESO QC VRAD BARYCOR = -8.401681 / Barycentric radial velocity correctio
+    #     # HIERARCH ESO QC VRAD HELICOR = -8.398018 / Heliocentric radial velocity correcti
+    #     ###################################################################################
+    #
+    #     for n in range(len(lines)):
+    #         fname = lines[n]
+    #         # read fits
+    #         hdulist = fits.open(fname)
+    #         # print column information
+    #         # hdulist[1].columns
+    #         # get to the data part (in extension 1)
+    #         scidata = hdulist[1].data
+    #         wave = scidata[0][0]
+    #         arr1 = scidata[0][1]
+    #         arr2 = scidata[0][2]
+    #         fits_header = hdulist[0].header
+    #         hdulist.close()
+    #
+    #         # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
+    #         MJD[n] = fits_header["MJD-OBS"]
+    #         vel, flux = spt.lineProf(wave, arr1, lbc=lbd0 * 10)
+    #
+    #         # vel = vel + corr
+    #         # cut = asas(vel, flux, line)
+    #         # cut_all.append(cut)
+    #         if MJD[n] not in [53012.15712866, 53012.17133498]:
+    #             # print(fname)
+    #             vel_all.append(vel)
+    #             # corr_all.append(corr)
+    #             flux_all.append(flux)
+    #             MJD_all.append(MJD[n])
+    #             flag_all.append(flag)
+    #
+    # ##plot BeSOS
+    # flag = "BeSOS"
+    # if flag in USE:
+    #     lines = glob(direc + "Dropbox/Amanda/Data_AARA/BeSOS/*.fits")
+    #     MJD = np.zeros([len(lines)])
+    #     JD = np.zeros([len(lines)])
+    #
+    #     # FROM WEBSITE
+    #     # All the spectra available are reduced and corrected with the heliocentric velocity
+    #
+    #     for n in range(len(lines)):
+    #         fname = lines[n]
+    #         # read fits
+    #         hdr_list = fits.open(fname)
+    #         fits_data = hdr_list[0].data
+    #         fits_header = hdr_list[0].header
+    #         hdr_list.close()
+    #         # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
+    #         # read MJD
+    #         MJD[n] = fits_header["MJD"]
+    #         # corr = 0.
+    #         # t = Time(MJD[n], format = 'mjd', scale='utc')
+    #         # JD[n] = t.jd
+    #         # corr, hjd = pyasl.helcorr(lon, lat, 2400., ra, dec, JD[n])
+    #         lbd = fits_header["CRVAL1"] + fits_header["CDELT1"] * np.arange(
+    #             len(fits_data)
+    #         )
+    #         vel, flux = spt.lineProf(lbd, fits_data, lbc=lbd0 * 10)
+    #         # corr = fits_header['BVEL']
+    #         # vel = vel + corr
+    #         # cut = asas(vel, flux, line)
+    #         # cut_all.append(cut)
+    #         vel_all.append(vel)
+    #         # corr_all.append(corr)
+    #         flux_all.append(flux)
+    #         MJD_all.append(MJD[n])
+    #         flag_all.append(flag)
+    #
+    # # plot prof_nelson
+    # flag = "GAVO"
+    # if flag in USE:
+    #     lines = glob(direc + "Dropbox/Amanda/Data_AARA/GAVO/*mt")
+    #     MJD = np.zeros([len(lines)])
+    #     JD = np.zeros([len(lines)])
+    #
+    #     for n in range(len(lines)):
+    #         fname = lines[n]
+    #         # print(fname)
+    #         # read fits
+    #         hdr_list = fits.open(fname)
+    #         fits_data = hdr_list[0].data
+    #         fits_header = hdr_list[0].header
+    #         hdr_list.close()
+    #
+    #         # fits_header.totextfile('{0}_{1}.txt'.format(flag, n))
+    #         # read MJD
+    #         MJD[n] = fits_header["MJD-OBS"]
+    #         t = Time(MJD[n], format="mjd", scale="utc")
+    #         JD[n] = t.jd
+    #         # corr = 0.
+    #         lbd = fits_header["CRVAL1"] + fits_header["CDELT1"] * np.arange(
+    #             len(fits_data)
+    #         )
+    #         if lbd0 * 10 > np.max(lbd):
+    #             continue
+    #         vel, flux = spt.lineProf(lbd, fits_data, lbc=lbd0 * 10)
+    #         # vel = vel + corr
+    #         vel_all.append(vel)
+    #         # corr_all.append(corr)
+    #         flux_all.append(flux)
+    #         MJD_all.append(MJD[n])
+    #         flag_all.append(flag)
+
+    return MJD_all, vel_all, flux_all, flag_all

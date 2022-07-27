@@ -113,7 +113,9 @@ def dynamic_spectra(
 
     for j in range(len(flx_all)):
         # superflux = np.tile(flx_all[j]-hello, (1, 1))
-        superflux = flx_all[j] - hello
+        # keep = np.logical_and(vel_all[j] > -100, vel_all[j] < 100)
+        # mean_flux = np.mean(flux_all[j][keep])
+        superflux = flx_all[j] - hello  # - mean_flux
         # superflux = np.tile(flx_all[j], (1, 1))
         # supes.append((superflux+ 1)**3 - 1)
         supes.append(superflux)
@@ -156,14 +158,14 @@ def dynamic_spectra(
         # MJD_range = np.arange(MJD_keep[0], MJD_keep[-1], 96)
         for cc in range(0, 150):
             MJD_range = [int(siz) * cc, int(siz) * cc + 5.0]
-            ic(MJD_range)
+            # ic(MJD_range)
             s_mask = np.ma.masked_inside(MJD_a, MJD_range[0], MJD_range[1]).mask
-            ic(MJD_keep[s_mask])
+            # ic(MJD_keep[s_mask])
             try:
                 s_flx_pos = np.sum(np.array(supes)[s_mask], axis=0) / len(
                     np.array(supes)[s_mask]
                 )
-                ic(len(s_flx_pos))
+                # ic(len(s_flx_pos))
             except RuntimeWarning:
                 # if len(s_flx_pos) != len(hello):
                 s_flx_pos = np.zeros(len(hello))
@@ -171,6 +173,8 @@ def dynamic_spectra(
         master = np.copy(master)
         set_time_limits = [MJD_all.max(), MJD_all.min()]
         set_time_label = "RJD"
+        my_cmap = copy.copy(mpl.cm.get_cmap("CMRmap"))
+        # my_cmap = copy.copy(sns.dark_palette("#A0e5f7", as_cmap=True))
 
     else:
         phase = phase / resolution
@@ -216,6 +220,7 @@ def dynamic_spectra(
 
         set_time_limits = [2, 0]
         set_time_label = "Phase (P = {:.2f})".format(P)
+        my_cmap = copy.copy(sns.dark_palette("#A0e5f7", as_cmap=True))
 
     # print(np.log10(master))
     if log_scale:
@@ -223,8 +228,8 @@ def dynamic_spectra(
     else:
         masked_array = np.ma.masked_where(master == 0, master)
     # print(masked_array)
-    # my_cmap = copy.copy(mpl.cm.get_cmap("viridis"))
-    my_cmap = copy.copy(sns.dark_palette("#A0e5f7", as_cmap=True))
+
+    #
     my_cmap.set_bad(color="white")
 
     fig = plt.figure(1, figsize=(4, 8))
@@ -270,13 +275,19 @@ def dynamic_spectra(
     if not phase_folded:
         t = np.linspace(t0, MJD_all.max(), 1000)
         sine = np.sin(2 * np.pi / P * t)
-        ax.set_ylim(MJD_all.max(), 1600)
-
+        ax.set_ylim(MJD_all.max(), MJD_all.min())
+        # V/R max 1 = RJD = 2512
+        # V/R min 1 = RJD 2827
+        # V/R max 2 = RJD 3133
+        # V/R min 2 = RJD 3287
+        # V/R max 3 = 3398
+        # V/R min 3 = 3513
+        # V/R max 4 = 3605
         ax.annotate(
             "",
             xy=(velmax, 2512),
-            xytext=(velmax + 90, 2512),
-            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
+            xytext=(velmax + velmax / 5.0, 2512),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
         )
         ax.annotate(
             r"$V/R_{MAX}$",
@@ -288,13 +299,13 @@ def dynamic_spectra(
         )
         ax.annotate(
             "",
-            xy=(velmax, 2814),
-            xytext=(velmax + 90, 2814),
-            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
+            xy=(velmax, 2827),
+            xytext=(velmax + velmax / 5.0, 2827),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
         )
         ax.annotate(
             r"$V/R_{MIN}$",
-            xy=(velmax, 2814),
+            xy=(velmax, 2827),
             xycoords="data",
             xytext=(5, 5),
             textcoords="offset points",
@@ -303,36 +314,49 @@ def dynamic_spectra(
 
         ax.annotate(
             "",
-            xy=(velmax, 3138),
-            xytext=(velmax + 90, 3138),
-            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
+            xy=(velmax, 3133),
+            xytext=(velmax + velmax / 5.0, 3133),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
         )
         # ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 3138),xycoords='data',
         #        xytext=(5, 5), textcoords='offset points',fontsize=8)
         ax.annotate(
             "",
             xy=(velmax, 3287),
-            xytext=(velmax + 90, 3287),
-            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
+            xytext=(velmax + velmax / 5.0, 3287),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
         )
         # ax.annotate(r'$V/R_{MIN}$', xy=(velmax, 3287), xycoords='data',
         #        xytext=(5, 5), textcoords='offset points',fontsize=8)
 
         ax.annotate(
             "",
-            xy=(velmax, 3381),
-            xytext=(velmax + 90, 3381),
+            xy=(velmax, 3398),
+            xytext=(velmax + velmax / 5.0, 3398),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
+        )
+        ax.annotate(
+            "",
+            xy=(velmax, 3513),
+            xytext=(velmax + velmax / 5.0, 3513),
             arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="r", ec="r"),
+        )
+        ax.annotate(
+            "",
+            xy=(velmax, 3605),
+            xytext=(velmax + velmax / 5.0, 3605),
+            arrowprops=dict(arrowstyle="-|>", alpha=0.5, fc="b", ec="b"),
         )
         # ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 3381),xycoords='data',
         #        xytext=(5, 5), textcoords='offset points',fontsize=8)
+        black_line = np.loadtxt("Ha_peak_RVs_fit.txt").T
+        ax.plot(black_line[1], black_line[0], "k", lw=1)
 
     else:
         t = np.linspace(0.0, 2.0, 100)
         sine = np.sin(np.linspace(np.pi / 2, 4.5 * np.pi, 100))
-
-    amp = 55.9
-    # ax.plot(amp * sine, t, color="xkcd:darkish red", lw=0.6)
+        amp = 55.9
+        ax.plot(amp * sine, t, color="xkcd:darkish red", lw=0.6)
 
     ax2 = plt.subplot(gs1[3, 0])
     ax2.set_ylabel("Norm. flux", fontsize=9)
@@ -358,7 +382,9 @@ def dynamic_spectra(
     # ax.xaxis.grid(True) # Show the vertical gridlines
     # ax2.xaxis.grid(True) # Show the vertical gridlines
 
-    plt.savefig(line + "_dynamic_14-06-22.pdf", dpi=100, bbox_inches="tight")
+    plt.savefig(
+        line + "_dynamic_08-07-22_PHASE-II-2400-2900.pdf", dpi=100, bbox_inches="tight"
+    )
 
     # temp2 = np.arange(-850, +850, 0.2)
     ##
