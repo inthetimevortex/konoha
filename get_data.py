@@ -140,7 +140,7 @@ def read_iue(folder_data, stars):
     return wave, flux, sigma
 
 
-def get_iue(files, plot=False, each_fits=False):
+def get_iue(files, individual=False, plot=False, each_fits=False):
     """
     Get IUE data, at input wavelength grid
 
@@ -151,52 +151,68 @@ def get_iue(files, plot=False, each_fits=False):
     """
     # flist = glob("/home/amanda/Dropbox/Amanda/Data/IUE-INES/*")
     flist = glob(files)
-    lbd_iue = np.array([])
-    flux_iue = np.array([])
-    dflux_iue = np.array([])
+    if not individual:
+        lbd_iue = np.array([])
+        flux_iue = np.array([])
+        dflux_iue = np.array([])
+    else:
+        lbd_iue = []
+        flux_iue = []
+        dflux_iue = []
+        HJD_iue = []
     for i in range(len(flist)):
         fname = flist[i]
         with fits.open(fname) as hdr_list:
             # hdr_list = fits.open(fname)
             fits_data = hdr_list[1].data
             fits_header = hdr_list[0].header
-            lbd_iue = np.hstack([lbd_iue, 1e-4 * fits_data["WAVELENGTH"]])
-            flux_iue = np.hstack([flux_iue, 1e4 * fits_data["FLUX"]])
-            dflux_iue = np.hstack([dflux_iue, 1e4 * fits_data["SIGMA"]])
+            qualy = fits_data.field("QUALITY")
+            idx = np.where((qualy == 0))
+            if not individual:
+                lbd_iue = np.hstack([lbd_iue, 1e-4 * fits_data["WAVELENGTH"][idx]])
+                flux_iue = np.hstack([flux_iue, 1e4 * fits_data["FLUX"][idx]])
+                dflux_iue = np.hstack([dflux_iue, 1e4 * fits_data["SIGMA"][idx]])
+            else:
+                HJD_iue.append(fits_header["HJD-MID"])
+                lbd_iue.append(fits_data["WAVELENGTH"][idx])
+                flux_iue.append(fits_data["FLUX"][idx])
+                dflux_iue.append(fits_data["SIGMA"][idx])
             if plot:
                 plt.errorbar(
-                    fits_data["WAVELENGTH"],
-                    fits_data["FLUX"],
-                    yerr=fits_data["SIGMA"],
+                    fits_data["WAVELENGTH"][idx],
+                    fits_data["FLUX"][idx],
+                    yerr=fits_data["SIGMA"][idx],
                     marker="o",
                     markersize=2,
                     label=fname,
                 )
                 if each_fits:
                     plt.legend()
-                    plt.ylim(0.0, 3e-9)
+                    plt.ylim(0.0, 1.5e-8)
                     plt.xlim(1000, 3000)
                     plt.savefig(fname + ".png", dpi=100)
                     plt.close()
-
-    ordem = lbd_iue.argsort()
-    lbd_iue = lbd_iue[ordem]
-    flux_iue = flux_iue[ordem]
-    dflux_iue = dflux_iue[ordem]
-    keep = flux_iue > 0.0
-    lbd_iue = lbd_iue[keep]
-    flux_iue = flux_iue[keep]
-    dflux_iue = dflux_iue[keep]
-
-    nbins = 200
-    xbin, ybin, dybin = bin_data(lbd_iue, flux_iue, nbins, exclude_empty=True)
 
     if not each_fits:
         # plt.legend()
         plt.savefig("IUE_data.png", dpi=100)
         plt.close()
 
-    return lbd_iue, flux_iue, dflux_iue
+    if not individual:
+        ordem = lbd_iue.argsort()
+        lbd_iue = lbd_iue[ordem]
+        flux_iue = flux_iue[ordem]
+        dflux_iue = dflux_iue[ordem]
+        keep = flux_iue > 0.0
+        lbd_iue = lbd_iue[keep]
+        flux_iue = flux_iue[keep]
+        dflux_iue = dflux_iue[keep]
+
+        nbins = 200
+        xbin, ybin, dybin = bin_data(lbd_iue, flux_iue, nbins, exclude_empty=True)
+        return lbd_iue, flux_iue, dflux_iue
+    else:
+        return lbd_iue, flux_iue, dflux_iue, HJD_iue
 
 
 def get_lines(line):
