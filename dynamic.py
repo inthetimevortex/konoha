@@ -39,14 +39,13 @@ from collections import OrderedDict
 import seaborn as sns
 import datetime as dt
 import matplotlib.gridspec as gridspec
-import pandas as pd
 from scipy.interpolate import griddata
 from matplotlib.colorbar import Colorbar
 import seaborn as sns
 import copy
-from scipy import stats
 from icecream import ic
 from mpl_toolkits.axes_grid1.axes_divider import make_axes_locatable
+from matplotlib.widgets import Slider, Button
 
 sns.set_style("ticks", {"xtick.major.direction": "in", "ytick.major.direction": "in"})
 
@@ -74,6 +73,11 @@ def dynamic_spectra(
     t0,
     velmin,
     velmax,
+    time_cut,
+    axes,
+    trange,
+    subplot,
+    save_plot,
 ):
 
     # resolution = 0.5 #days
@@ -103,28 +107,39 @@ def dynamic_spectra(
     MJD_all = MJD_all[keep]
     MJD_to_sort = np.array(MJD_all)
     sort = MJD_to_sort.argsort()
+    MJD_a = MJD_all[sort]
+
     # plt.legend()
     # plt.show()
     # print(len(MJD_all))
     # im so good at names
-    hello = np.mean(flx_all, axis=0)
+    # hello = np.mean(flx_all, axis=0)
+    # print(MJD_all[MJD_all < 2200])
+
+    # hello = np.mean(flx_all[MJD_all < 2200], axis=0)
+    hello = np.mean(flx_all[MJD_all > time_cut], axis=0)
+
+    flx_all = flx_all[MJD_all > time_cut]
+    MJD_a = MJD_a[MJD_all > time_cut]
 
     supes = []
 
     for j in range(len(flx_all)):
         # superflux = np.tile(flx_all[j]-hello, (1, 1))
         # keep = np.logical_and(vel_all[j] > -100, vel_all[j] < 100)
-        # mean_flux = np.mean(flux_all[j][keep])
-        superflux = flx_all[j] - hello  # - mean_flux
+        mask_vel = np.logical_and(temp > -50, temp < 50)
+        superflux = flx_all[j] - hello
+        # mean_flux = np.mean(superflux[mask_vel])
+        # superflux = superflux / np.abs(mean_flux)
         # superflux = np.tile(flx_all[j], (1, 1))
         # supes.append((superflux+ 1)**3 - 1)
         supes.append(superflux)
 
     # flux_a = np.tile(flx_all[0], (1, 1))
-    MJD_a = MJD_all[sort]
-    # print(len(MJD_a), len(MJD_all))
-    MJD_a = MJD_a - min(MJD_a)
+    # print(MJD_a)
     MJD_keep = np.copy(MJD_a)
+    MJD_a = MJD_a - time_cut  # min(MJD_a)
+
     phase = (MJD_a - t0) / P % 1
     phase_keep = np.copy(phase)
     # ic(phase_keep)
@@ -132,7 +147,9 @@ def dynamic_spectra(
     if not phase_folded:
         MJD_a = MJD_a / resolution
 
-        size_time = np.arange(MJD_a.min(), MJD_a.max(), 1)
+        # print(MJD_a)
+
+        size_time = np.arange(0, (trange[1] - trange[0]) / resolution, 1)
         print(len(size_time))
         print(size_time)
 
@@ -151,7 +168,8 @@ def dynamic_spectra(
 
             master[final_pos] = flx_pos
 
-        siz = max(MJD_a) / 150
+        # siz = max(MJD_a) / 150
+        siz = (trange[1] - trange[0]) / resolution / 150
         s_master = np.zeros([150, len(hello)])
         # MJD_norm = MJD_a/max(MJD_a)
         # ic(MJD_a)
@@ -171,7 +189,9 @@ def dynamic_spectra(
                 s_flx_pos = np.zeros(len(hello))
             s_master[cc] = s_flx_pos
         master = np.copy(master)
-        set_time_limits = [MJD_all.max(), MJD_all.min()]
+        # set_time_limits = [MJD_keep.max(), MJD_keep.min()]
+        set_time_limits = [trange[1], trange[0]]
+        # print(set_time_limits)
         set_time_label = "RJD"
         my_cmap = copy.copy(mpl.cm.get_cmap("CMRmap"))
         # my_cmap = copy.copy(sns.dark_palette("#A0e5f7", as_cmap=True))
@@ -222,6 +242,8 @@ def dynamic_spectra(
         set_time_label = "Phase (P = {:.2f})".format(P)
         my_cmap = copy.copy(sns.dark_palette("#A0e5f7", as_cmap=True))
 
+    # my_cmap = copy.copy(sns.dark_palette("#A0e5f7", as_cmap=True))
+    # my_cmap = copy.copy(sns.color_palette("bone", as_cmap=True))
     # print(np.log10(master))
     if log_scale:
         masked_array = np.ma.masked_where(master == 0, np.log10(master))
@@ -232,14 +254,18 @@ def dynamic_spectra(
     #
     my_cmap.set_bad(color="white")
 
-    fig = plt.figure(1, figsize=(4, 8))
-    gs1 = gridspec.GridSpec(4, 1, height_ratios=[0.05, 0.15, 1, 0.2])
-    gs1.update(hspace=0.00, wspace=0.025)  # , top=0.9)
+    if save_plot:
+        fig = plt.figure(1, figsize=(4, 8))
+        gs1 = gridspec.GridSpec(4, 1, height_ratios=[0.05, 0.15, 1, 0.2])
+        gs1.update(hspace=0.00, wspace=0.025)  # , top=0.9)
+        ax = plt.subplot(gs1[2, 0])
+        ax2 = plt.subplot(gs1[3, 0])
+    else:
+        ax = axes[0]
+        ax2 = axes[1]
 
-    # fig.subplots_adjust(right=0.8)
-
-    ax = plt.subplot(gs1[2, 0])
     # cbax = fig.add_axes([.85, 0.25, 0.03, 0.5])
+    print(set_time_limits)
     if set_limits:
         img1 = ax.imshow(
             masked_array,
@@ -261,21 +287,39 @@ def dynamic_spectra(
 
     ax_divider = make_axes_locatable(ax)
     # add an axes above the main axes.
-    cbax = ax_divider.append_axes("top", size="5%", pad="5%")
+    cbax = ax_divider.append_axes("top", size="5%", pad="10%")
     # cb = colorbar(im2, cax=cax2, orientation="horizontal")
     cb = Colorbar(ax=cbax, mappable=img1, orientation="horizontal", ticklocation="top")
     cb.set_label("Relative flux", fontsize=11)
     # cb.set_clim(-0.1, 0.1)
+    # ax_cmax = plt.axes([0.15, 0.94, 0.65, 0.03])
+    # ax_cmin = plt.axes([0.15, 0.90, 0.65, 0.03])
+    # c_max = 2
+    # c_min = -2
+    #
+    # s_cmax = Slider(ax_cmax, "max", -2, 3, valfmt=c_max)
+    # s_cmin = Slider(ax_cmin, "min", -2, 3, valfmt=c_min)
+    #
+    # def update(val, s=None):
+    #     _cmin = s_cmin.val
+    #     _cmax = s_cmax.val
+    #     ic([_cmin, _cmax])
+    #     img1.set_clim([_cmin, _cmax])
+    #     plt.draw()
+    #
+    # s_cmax.on_changed(update)
+    # s_cmin.on_changed(update)
 
     plt.setp(ax.get_xticklabels(), visible=False)
-    ax.set_ylabel(set_time_label)
     # ax.set_title(line)
     # t = np.linspace(0., 2., 100)
     # t = np.linspace(MJD_all.min(), MJD_all.max(), 1000)
-    if not phase_folded:
-        t = np.linspace(t0, MJD_all.max(), 1000)
-        sine = np.sin(2 * np.pi / P * t)
-        ax.set_ylim(MJD_all.max(), MJD_all.min())
+
+    # THIS WAS FOR GCAS HALPHA
+    if not phase_folded and subplot == "last":
+        # t = np.linspace(t0, MJD_all.max(), 1000)
+        # sine = np.sin(2 * np.pi / P * t)
+        # ax.set_ylim(MJD_keep.max(), MJD_keep.min())
         # V/R max 1 = RJD = 2512
         # V/R min 1 = RJD 2827
         # V/R max 2 = RJD 3133
@@ -349,17 +393,22 @@ def dynamic_spectra(
         )
         # ax.annotate(r'$V/R_{MAX}$', xy=(velmax, 3381),xycoords='data',
         #        xytext=(5, 5), textcoords='offset points',fontsize=8)
-        black_line = np.loadtxt("Ha_peak_RVs_fit.txt").T
-        ax.plot(black_line[1], black_line[0], "k", lw=1)
+        # black_line = np.loadtxt("Ha_peak_RVs_fit.txt").T
+        # ax.plot(black_line[1], black_line[0], "k", lw=1)
 
     else:
         t = np.linspace(0.0, 2.0, 100)
         sine = np.sin(np.linspace(np.pi / 2, 4.5 * np.pi, 100))
         amp = 55.9
-        ax.plot(amp * sine, t, color="xkcd:darkish red", lw=0.6)
+        # ax.plot(amp * sine, t, color="xkcd:darkish red", lw=0.6)
 
-    ax2 = plt.subplot(gs1[3, 0])
-    ax2.set_ylabel("Norm. flux", fontsize=9)
+    if subplot == "first":
+        ax2.set_ylabel("Norm. flux", fontsize=9)
+        ax.set_ylabel(set_time_label)
+    else:
+        # plt.setp(ax2.get_yticklabels(), visible=False)
+        plt.setp(ax.get_yticklabels(), visible=False)
+
     ax2.set_xlabel(r"$\mathrm{Velocity\,[km\,s^{-1}]}$")
     nbins = 4
     ax.yaxis.set_major_locator(MaxNLocator(nbins=8, prune="upper"))
@@ -372,6 +421,7 @@ def dynamic_spectra(
 
     ax2.plot(temp, hello, color=my_cmap(0.25), lw=2)
     ax2.set_xlim(velmin, velmax)
+    # ax2.set_ylim(0.95, 2.2)
 
     # ax.axvline(-200, ls=':', color='k', lw=0.5)
     # ax.axvline(200, ls=':', color='k', lw=0.5)
@@ -381,10 +431,19 @@ def dynamic_spectra(
     # ax2.yaxis.grid(False) # Hide the horizontal gridlines
     # ax.xaxis.grid(True) # Show the vertical gridlines
     # ax2.xaxis.grid(True) # Show the vertical gridlines
+    date = dt.datetime.today().strftime("%d-%m-%y")
 
-    plt.savefig(
-        line + "_dynamic_08-07-22_PHASE-II-2400-2900.pdf", dpi=100, bbox_inches="tight"
-    )
+    # plt.show()
+    # plt.show()
+
+    if set_limits and save_plot:
+        plt.savefig(
+            line + "_dynamic_" + date + "_" + str(vmin) + "_" + str(vmax) + ".pdf",
+            dpi=100,
+            bbox_inches="tight",
+        )
+    elif save_plot:
+        plt.savefig(line + "_dynamic_" + date + ".pdf", dpi=100, bbox_inches="tight")
 
     # temp2 = np.arange(-850, +850, 0.2)
     ##

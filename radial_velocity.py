@@ -26,6 +26,7 @@ import os
 import numpy as np
 from scipy.optimize import curve_fit
 from scipy.interpolate import griddata, interp1d
+import matplotlib.pyplot as plt
 
 
 def delta_v(vel, flux, line):
@@ -59,6 +60,9 @@ def delta_v(vel, flux, line):
         (vel > v_trechos[0]) * (vel < v_trechos[1])
         + (vel > v_trechos[2]) * (vel < v_trechos[3])
     )
+
+    plt.plot(vel[asas], flux[asas])
+    plt.show()
 
     # p0 is the initial guess for the fitting coefficients (A, mu and sigma above)
     p0 = [flux.min() - 1.0, v_trechos.mean(), v_trechos[2] - v_trechos[1]]
